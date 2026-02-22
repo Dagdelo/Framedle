@@ -1,0 +1,12 @@
+{
+  "videos": [
+    "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    "https://www.youtube.com/watch?v=jNQXAC9IVRw"
+  ],
+  "settings": {
+    "num_frames": 6,
+    "min_spacing_sec": 10,
+    "frame_quality": 2,
+    "frame_width": 1280
+  }
+}

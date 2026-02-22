@@ -1,0 +1,63 @@
+# .github/workflows/extract-frames.yml
+# ======================================
+# Daily cron job to extract top heatmap frames from YouTube videos
+# and save them to Neon PostgreSQL.
+#
+# Setup:
+#   1. Add these secrets to your GitHub repo (Settings > Secrets):
+#      - DATABASE_URL: Your Neon PostgreSQL connection string
+#      - VIDEO_URL:    YouTube video URL to process (or use config file)
+#
+#   2. (Optional) For processing multiple/dynamic videos,
+#      modify the "Get video URL" step to fetch from an API, DB, or config file.
+
+name: Extract YouTube Heatmap Frames
+
+on:
+  schedule:
+    # Runs every day at 06:00 UTC
+    - cron: "0 6 * * *"
+
+  # Allow manual trigger from GitHub Actions UI
+  workflow_dispatch:
+    inputs:
+      video_url:
+        description: "YouTube video URL to process"
+        required: false
+        type: string
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  extract-frames:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run frame extraction
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          VIDEO_URL: ${{ github.event.inputs.video_url || secrets.VIDEO_URL }}
+        run: python extract_frames.py
+
+      - name: Summary
+        if: always()
+        run: echo "Extraction completed at $(date -u)"
