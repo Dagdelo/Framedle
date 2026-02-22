@@ -1,116 +1,156 @@
 # ADR-002: Authentication Provider — Clerk
 
 **Status**: Accepted
-**Date**: 2025-02-22
+**Date**: 2026-02-22
 **Deciders**: Core team
 **Category**: Authentication & Identity
 
 ## Context
 
 Framedle needs authentication supporting:
+
 - Anonymous play (no signup required for daily games)
 - Social SSO (Google, Discord, Apple, GitHub, Twitter)
 - Email + password registration
 - Anonymous → registered account upgrade (merge history)
 - Multi-platform (Web, Tauri desktop, Tauri mobile)
-- JWT-based for serverless API verification (Cloudflare Workers)
+- JWT-based verification for serverless API (Cloudflare Workers — no persistent connections)
 
 ## Options Considered
 
-### Option A: Clerk ✅ (Selected)
-- Hosted auth service with generous free tier (10,000 MAU)
-- Pre-built UI components (sign-in, user profile)
-- All major social providers + email/password + magic links
-- JWT tokens verifiable at the edge (no DB call needed)
-- React SDK with hooks (`useUser`, `useAuth`, `useSignIn`)
-- Anonymous → registered merge via custom claims
-- Webhook system for user lifecycle events
-- Cost: Free to 10K MAU, then $25/mo for 100K MAU
-
-### Option B: Auth.js (NextAuth)
-- Open source, self-hosted
-- Good social provider support
-- Tightly coupled to Next.js (harder for Tauri apps)
-- Requires database session management
-- No built-in UI components
-- Anonymous user handling requires custom implementation
-
-### Option C: Supabase Auth
-- Free tier with good social SSO
-- Tightly coupled to Supabase ecosystem
-- JWT verification at edge is possible but complex
-- Would push us toward Supabase DB (we want Neon)
-- Anonymous → registered merge is manual
-
-### Option D: Lucia Auth
-- Lightweight, flexible, open source
-- Full control over auth logic
-- Significant implementation effort
-- No pre-built UI
-- All provider integrations are manual
+| Criteria | Clerk ✅ | Auth.js (NextAuth) | Supabase Auth | Lucia Auth |
+|----------|-------|------------------|---------------|------------|
+| Hosted/managed | ✅ | Self-hosted | Hosted | Self-hosted |
+| Pre-built UI | ✅ Full components | ❌ | Partial | ❌ |
+| Social SSO | All major providers | Good coverage | Good coverage | Manual per provider |
+| Edge JWT verification | ✅ No DB call | ❌ DB sessions | ⚠️ Complex | ❌ |
+| Anonymous→registered | ✅ Custom claims | Manual | Manual | Manual |
+| Free tier | 10K MAU | Unlimited (self-host) | 50K MAU | Unlimited (self-host) |
+| Tauri compatibility | ✅ | ⚠️ Next.js coupled | ⚠️ Supabase coupled | ✅ |
+| Implementation effort | Days | Weeks | Weeks | Months |
 
 ## Decision
 
-**Clerk** — best developer experience, pre-built components, seamless anonymous→registered upgrade flow, and edge-compatible JWT verification. The free tier covers our launch phase, and the pricing scales reasonably.
+**Clerk** — best developer experience, pre-built components, seamless anonymous→registered upgrade flow, and edge-compatible JWT verification. The free tier (10K MAU) covers our launch phase.
 
-## Implementation Details
+## Implementation
 
-### Anonymous Users
-```typescript
-// Anonymous users get a device fingerprint
-const anonId = generateFingerprint(navigator);
-// Stored in localStorage/SQLite
-// All game results saved with anonId
+### Supported Providers
 
-// On registration, merge:
-// POST /api/user/claim-anonymous
-// { anonId, clerkUserId }
-// → Links all anonymous game results to the new account
-```
+1. **Google** (Gmail) — primary, largest user base
+2. **Discord** — gaming community crossover
+3. **Apple** — required for iOS App Store
+4. **GitHub** — developer audience
+5. **Twitter/X** — social sharing tie-in
+6. **Email + password** — universal fallback
+7. **Magic link** — passwordless option
 
-### JWT Verification in CF Workers
+### JWT Verification in Cloudflare Workers
+
 ```typescript
 import { verifyToken } from '@clerk/backend';
 
-// In Hono middleware:
+// Hono middleware — runs on every API request
 app.use('/api/*', async (c, next) => {
   const token = c.req.header('Authorization')?.replace('Bearer ', '');
+
   if (token) {
-    const payload = await verifyToken(token, { 
-      jwtKey: c.env.CLERK_JWT_KEY 
-    });
-    c.set('userId', payload.sub);
+    try {
+      const payload = await verifyToken(token, {
+        jwtKey: c.env.CLERK_JWT_KEY,
+      });
+      c.set('userId', payload.sub);
+      c.set('isAuthenticated', true);
+    } catch {
+      // Invalid token — treat as anonymous
+      c.set('isAuthenticated', false);
+    }
+  } else {
+    c.set('isAuthenticated', false);
   }
-  // Anonymous users proceed without userId
+
   await next();
 });
 ```
 
-### Supported Providers
-1. Google (Gmail) — primary
-2. Discord — gaming community
-3. Apple — iOS requirement
-4. GitHub — developer audience
-5. Twitter/X — social sharing tie-in
-6. Email + password — fallback
-7. Magic link — passwordless option
+Key: JWT verification uses the public key — no database call, no network request to Clerk. Pure cryptographic verification at the edge.
+
+### Anonymous → Registered Merge
+
+```typescript
+// When user registers and wants to claim anonymous history:
+// POST /api/user/claim-anonymous
+app.post('/api/user/claim-anonymous', async (c) => {
+  const { fingerprint } = await c.req.json();
+  const clerkUserId = c.get('userId');
+
+  // Find anonymous user by fingerprint
+  const anonUser = await db.query.users.findFirst({
+    where: eq(users.anonFingerprint, fingerprint),
+  });
+
+  if (!anonUser) return c.json({ merged: 0 });
+
+  // Merge: reassign all game results to the new account
+  const merged = await db
+    .update(gameResults)
+    .set({ userId: registeredUser.id })
+    .where(eq(gameResults.userId, anonUser.id));
+
+  // Transfer XP, streak, and achievements
+  await db.update(users).set({
+    xp: sql`xp + ${anonUser.xp}`,
+    streakCurrent: Math.max(registeredUser.streakCurrent, anonUser.streakCurrent),
+    streakBest: Math.max(registeredUser.streakBest, anonUser.streakBest),
+  }).where(eq(users.id, registeredUser.id));
+
+  // Retire anonymous identity
+  await db.delete(users).where(eq(users.id, anonUser.id));
+
+  return c.json({ merged: merged.count });
+});
+```
+
+### Webhook Sync (User Lifecycle)
+
+Clerk fires webhooks on user events. A dedicated Worker endpoint processes them:
+
+```
+POST /api/webhooks/clerk
+  user.created  → Create user record in Neon
+  user.updated  → Sync display name, avatar, email
+  user.deleted  → Soft-delete user, anonymize game results
+```
 
 ## Consequences
 
 ### Positive
-- Weeks of auth implementation → hours
-- Pre-built, accessible UI components
-- Edge-compatible JWT (no DB calls for auth)
-- Webhook-driven user lifecycle (sync to Neon on signup)
+
+- Weeks of auth implementation reduced to hours
+- Pre-built, accessible UI components (sign-in modal, user button)
+- Edge-compatible JWT (no DB calls for auth verification)
+- Webhook-driven user lifecycle (automatic Neon sync)
 - Built-in rate limiting and bot protection
+- Multi-platform SDK (React, vanilla JS for Tauri)
 
 ### Negative
-- Vendor dependency (auth is a core path)
-- Monthly cost at scale ($25/100K MAU)
-- Clerk outage = auth outage (mitigate with JWT caching)
-- Custom UI requires more work than using pre-built components
+
+- Vendor dependency on authentication (critical path)
+- Monthly cost at scale ($25/mo per 100K MAU beyond free tier)
+- Clerk outage = auth outage for new sessions (mitigated: existing JWTs still verify locally)
+- Custom UI requires more effort than using pre-built components
+
+### Cost Projection
+
+| MAU | Monthly Cost |
+|-----|-------------|
+| 0 - 10,000 | $0 (free) |
+| 10,001 - 100,000 | $25 |
+| 100,001 - 1,000,000 | $100 |
 
 ## References
+
 - [Clerk Documentation](https://clerk.com/docs)
 - [Clerk + Cloudflare Workers](https://clerk.com/docs/deployments/clerk-edge)
 - [Clerk Pricing](https://clerk.com/pricing)
+- [Clerk Webhooks](https://clerk.com/docs/integrations/webhooks)
