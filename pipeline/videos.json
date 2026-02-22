@@ -1,12 +1,18 @@
 {
   "videos": [
     "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-    "https://www.youtube.com/watch?v=jNQXAC9IVRw"
+    "https://www.youtube.com/watch?v=jNQXAC9IVRw",
+    "https://www.youtube.com/watch?v=kJQP7kiw5Fk",
+    "https://www.youtube.com/watch?v=9bZkp7q19f0",
+    "https://www.youtube.com/watch?v=JGwWNGJdvx8"
   ],
   "settings": {
     "num_frames": 6,
     "min_spacing_sec": 10,
-    "frame_quality": 2,
-    "frame_width": 1280
+    "frame_width": 1280,
+    "output_format": "webp",
+    "webp_quality": 80,
+    "generate_variants": true,
+    "upload_to_r2": true
   }
 }

@@ -1,38 +1,38 @@
 # .github/workflows/extract-frames.yml
 # ======================================
-# Daily cron job to extract top heatmap frames from YouTube videos
-# and save them to Neon PostgreSQL.
+# Daily pipeline: extract heatmap frames from YouTube videos,
+# generate image variants, upload to R2, catalog in Neon.
 #
-# Setup:
-#   1. Add these secrets to your GitHub repo (Settings > Secrets):
-#      - DATABASE_URL: Your Neon PostgreSQL connection string
-#      - VIDEO_URL:    YouTube video URL to process (or use config file)
+# Required secrets:
+#   DATABASE_URL       — Neon PostgreSQL connection string
+#   R2_ENDPOINT        — Cloudflare R2 endpoint
+#   R2_ACCESS_KEY_ID   — R2 access key
+#   R2_SECRET_ACCESS_KEY — R2 secret key
 #
-#   2. (Optional) For processing multiple/dynamic videos,
-#      modify the "Get video URL" step to fetch from an API, DB, or config file.
+# Optional:
+#   SLACK_WEBHOOK_URL  — Slack webhook for failure notifications
 
-name: Extract YouTube Heatmap Frames
+name: Daily Content Pipeline
 
 on:
   schedule:
-    # Runs every day at 06:00 UTC
-    - cron: "0 6 * * *"
+    - cron: "0 6 * * *"  # 06:00 UTC daily
 
-  # Allow manual trigger from GitHub Actions UI
   workflow_dispatch:
     inputs:
-      video_url:
-        description: "YouTube video URL to process"
+      video_urls:
+        description: "Comma-separated YouTube URLs (optional override)"
         required: false
         type: string
 
 env:
   PYTHON_VERSION: "3.12"
+  R2_BUCKET: "framedle-content"
 
 jobs:
   extract-frames:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 120
 
     steps:
       - name: Checkout repository
@@ -43,6 +43,7 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: "pip"
+          cache-dependency-path: pipeline/requirements.txt
 
       - name: Install system dependencies
         run: |
@@ -50,14 +51,33 @@ jobs:
           sudo apt-get install -y --no-install-recommends ffmpeg
 
       - name: Install Python dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r pipeline/requirements.txt
 
       - name: Run frame extraction
+        working-directory: pipeline
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          VIDEO_URL: ${{ github.event.inputs.video_url || secrets.VIDEO_URL }}
-        run: python extract_frames.py
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ env.R2_BUCKET }}
+        run: |
+          if [ -n "${{ github.event.inputs.video_urls }}" ]; then
+            python extract_batch.py --urls "${{ github.event.inputs.video_urls }}"
+          else
+            python extract_batch.py
+          fi
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error::Pipeline failed! Check logs above."
+          if [ -n "${{ secrets.SLACK_WEBHOOK_URL }}" ]; then
+            curl -X POST -H 'Content-type: application/json' \
+              --data '{"text":"⚠️ Framedle pipeline failed! Check GitHub Actions logs."}' \
+              "${{ secrets.SLACK_WEBHOOK_URL }}"
+          fi
 
       - name: Summary
         if: always()
-        run: echo "Extraction completed at $(date -u)"
+        run: echo "Pipeline completed at $(date -u). Exit code: $?"
