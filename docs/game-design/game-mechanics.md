@@ -224,7 +224,7 @@ Generated per game result via Cloudflare Worker (Satori/Resvg):
 │  🟨🟨🟩⬛⬛⬛                  │
 │  🔥 12-day streak            │
 │  Lv.23 🎯 Frame Hunter      │
-│  framedle.gg                 │
+│  framedle.wtf                 │
 └──────────────────────────────┘
 ```
 
@@ -239,21 +239,21 @@ Generated per game result via Cloudflare Worker (Satori/Resvg):
 🎬 Framedle #142 — 3/6
 🟨🟨🟩⬛⬛⬛
 🔥12 ⏱️0:47
-framedle.gg
+framedle.wtf
 ```
 
 **Year Guesser**:
 ```
 📅 Framedle Year #142 — 750/1000
 🟩🟩🟨🟩🟨 (✓ ✓ ±1 ✓ ±2)
-framedle.gg
+framedle.wtf
 ```
 
 **Streak Mode**:
 ```
 🔥 Framedle Streak — 23 🎯
 ⚡ Best: 23 | 🏆 Top 2%
-framedle.gg
+framedle.wtf
 ```
 
 **Duels**:
@@ -261,7 +261,7 @@ framedle.gg
 ⚔️ Framedle Duel
 🏆 W 3-1
 ⚡ Avg: 4.2s
-framedle.gg
+framedle.wtf
 ```
 
 **Pixel Reveal**:
@@ -269,7 +269,7 @@ framedle.gg
 🔍 Framedle Pixel #142 — 750pts
 🟫🟩⬛⬛⬛⬛
 Guessed at 16×16!
-framedle.gg
+framedle.wtf
 ```
 
 ### Share Destinations
@@ -286,7 +286,7 @@ framedle.gg
 
 ### Deep Links
 
-Share URLs follow the format: `framedle.gg/share/{share_hash}`
+Share URLs follow the format: `framedle.wtf/share/{share_hash}`
 
 The share page:
 1. Renders SSR meta tags (OG image, title, description) for link previews
