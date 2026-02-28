@@ -90,15 +90,16 @@ Clients (React + Tauri v2) → Cloudflare Edge (Hono API) → Neon + Redis + R2
 
 ## Cost Projections
 
-| Scale (DAU) | Estimated Monthly Cost |
-|-------------|----------------------|
-| 1,000 | ~$0 (free tiers) |
-| 10,000 | ~$35 |
-| 50,000 | ~$120 |
-| 100,000 | ~$280 |
-| 1,000,000 | ~$580 |
+| Scale (DAU) | Monthly Cost | First Paid Service |
+|-------------|-------------|-------------------|
+| 0–500 | **$0** | None (all free tiers) |
+| 1,000 | **~$7** | Redis pay-as-you-go + Workers Paid |
+| 5,000 | **~$32** | + Neon Launch |
+| 20,000 | **~$82** | + Fixed Redis plan |
+| 50,000 | **~$215** | + Clerk Pro, Sentry Team |
+| 100,000 | **~$1,100** | Clerk dominates (60% of cost) |
 
-The edge-first serverless architecture with R2's $0 egress keeps costs remarkably low even at scale.
+The edge-first serverless architecture with R2's $0 egress keeps costs remarkably low. See **[full cost analysis](architecture/cost-analysis.md)** for per-game resource consumption, free tier ceilings, and migration triggers.
 
 ## Documentation Index
 
@@ -109,6 +110,8 @@ The edge-first serverless architecture with R2's $0 egress keeps costs remarkabl
 | System Architecture | [docs/architecture/system-architecture.md](architecture/system-architecture.md) | Full system design and data flow |
 | Tech Stack | [docs/architecture/tech-stack.md](architecture/tech-stack.md) | Technology choices with justification |
 | Database Schema | [docs/architecture/database-schema.md](architecture/database-schema.md) | Complete PostgreSQL schema |
+| Cost Analysis | [docs/architecture/cost-analysis.md](architecture/cost-analysis.md) | Free tier ceilings, migration triggers, cost at scale |
+| VPS Deployment | [docs/architecture/vps-deployment.md](architecture/vps-deployment.md) | Hostinger KVM2 self-hosted stack, Docker Compose, open-source alternatives |
 | ADRs (001-009) | [docs/adr/](adr/) | Architectural Decision Records |
 | Roadmap | [docs/project-management/roadmap.md](project-management/roadmap.md) | 26-week phased delivery plan |
 | Linear Issues | [docs/project-management/linear-issues.md](project-management/linear-issues.md) | 50 issues, 226 story points |
