@@ -107,7 +107,7 @@ export type AppType = typeof app;
 import { hc } from 'hono/client';
 import type { AppType } from '@framedle/api';
 
-const client = hc<AppType>('https://api.framedle.gg');
+const client = hc<AppType>('https://api.framedle.wtf');
 // client.api.game[':mode'].daily.$get() — fully typed
 ```
 
