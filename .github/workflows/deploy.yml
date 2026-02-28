@@ -1,0 +1,24 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    name: Trigger Coolify Deployment
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Coolify webhook
+        run: |
+          curl -f -X POST "${{ secrets.COOLIFY_WEBHOOK_URL }}" \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" \
+            || echo "Coolify webhook not configured yet — deployment skipped"
+        # Alternative: SSH deploy
+        # - uses: appleboy/ssh-action@v1
+        #   with:
+        #     host: ${{ secrets.VPS_HOST }}
+        #     username: ${{ secrets.VPS_USER }}
+        #     key: ${{ secrets.VPS_SSH_KEY }}
+        #     script: |
+        #       cd /opt/framedle && git pull origin main
