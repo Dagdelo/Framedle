@@ -1,0 +1,65 @@
+# Local secrets for Framedle
+# This file is gitignored — safe to store API keys here
+# Copy to .envrc.local and fill in your secrets:
+#   cp .envrc.local.example .envrc.local
+
+# ============================================================
+# Database (PostgreSQL — Neon free tier or VPS self-hosted)
+# ============================================================
+export DATABASE_URL="postgresql://framedle:YOUR_PASSWORD@localhost:5432/framedle"
+
+# ============================================================
+# Redis / Valkey (Upstash free tier or VPS self-hosted)
+# ============================================================
+export REDIS_URL="redis://localhost:6379"
+# Upstash (if using managed):
+# export UPSTASH_REDIS_REST_URL="https://YOUR_ENDPOINT.upstash.io"
+# export UPSTASH_REDIS_REST_TOKEN="YOUR_TOKEN"
+
+# ============================================================
+# Object Storage (Cloudflare R2 free tier or VPS Garage)
+# ============================================================
+export R2_ENDPOINT="https://YOUR_ACCOUNT_ID.r2.cloudflarestorage.com"
+export R2_ACCESS_KEY="YOUR_R2_ACCESS_KEY"
+export R2_SECRET_KEY="YOUR_R2_SECRET_KEY"
+export R2_BUCKET="framedle-content"
+
+# ============================================================
+# Auth (Logto self-hosted or Clerk free tier)
+# ============================================================
+# Logto (self-hosted on VPS):
+export LOGTO_ENDPOINT="https://auth.framedle.gg"
+export LOGTO_APP_ID="YOUR_LOGTO_APP_ID"
+export LOGTO_APP_SECRET="YOUR_LOGTO_APP_SECRET"
+
+# Clerk (managed — if using instead of Logto):
+# export NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_test_XXXX"
+# export CLERK_SECRET_KEY="sk_test_XXXX"
+
+# ============================================================
+# Linear (project management — CLI, MCP, and API)
+# ============================================================
+# Get your API key from: https://linear.app/settings/account/security
+# Used by: @linear/cli, linear MCP server, Linear API direct calls
+export LINEAR_API_KEY="lin_api_XXXX"
+
+# ============================================================
+# Analytics & Error Tracking (VPS self-hosted)
+# ============================================================
+# Umami (self-hosted):
+export NEXT_PUBLIC_UMAMI_WEBSITE_ID="YOUR_UMAMI_SITE_ID"
+export NEXT_PUBLIC_UMAMI_URL="https://analytics.framedle.gg"
+
+# GlitchTip (self-hosted, Sentry-compatible DSN):
+export NEXT_PUBLIC_SENTRY_DSN="https://KEY@errors.framedle.gg/1"
+
+# ============================================================
+# Deployment (VPS)
+# ============================================================
+export VPS_HOST="YOUR_VPS_IP"
+export VPS_USER="root"
+
+# ============================================================
+# Domain
+# ============================================================
+export DOMAIN="framedle.gg"
