@@ -28,7 +28,7 @@ export R2_BUCKET="framedle-content"
 # Auth (Logto self-hosted or Clerk free tier)
 # ============================================================
 # Logto (self-hosted on VPS):
-export LOGTO_ENDPOINT="https://auth.framedle.gg"
+export LOGTO_ENDPOINT="https://auth.framedle.wtf"
 export LOGTO_APP_ID="YOUR_LOGTO_APP_ID"
 export LOGTO_APP_SECRET="YOUR_LOGTO_APP_SECRET"
 
@@ -55,10 +55,10 @@ export EXA_API_KEY="YOUR_EXA_API_KEY"
 # ============================================================
 # Umami (self-hosted):
 export NEXT_PUBLIC_UMAMI_WEBSITE_ID="YOUR_UMAMI_SITE_ID"
-export NEXT_PUBLIC_UMAMI_URL="https://analytics.framedle.gg"
+export NEXT_PUBLIC_UMAMI_URL="https://analytics.framedle.wtf"
 
 # GlitchTip (self-hosted, Sentry-compatible DSN):
-export NEXT_PUBLIC_SENTRY_DSN="https://KEY@errors.framedle.gg/1"
+export NEXT_PUBLIC_SENTRY_DSN="https://KEY@errors.framedle.wtf/1"
 
 # ============================================================
 # Deployment (VPS)
@@ -69,4 +69,4 @@ export VPS_USER="root"
 # ============================================================
 # Domain
 # ============================================================
-export DOMAIN="framedle.gg"
+export DOMAIN="framedle.wtf"
