@@ -47,7 +47,7 @@ Search-as-you-type against a video title database (server-side fuzzy search via 
 🎬 Framedle #142 — 3/6
 🟨🟨🟩⬛⬛⬛
 🔥12 ⏱️0:47
-framedle.gg
+framedle.wtf
 ```
 
 ### Anti-Cheat
