@@ -61,7 +61,7 @@
 - **Database backups**: Scheduled to any S3-compatible storage (R2, Garage, Backblaze)
 - **Container logs**: Real-time in the dashboard + in-browser terminal
 - **PR previews**: Open a PR → Coolify deploys a preview environment
-- **Multi-app routing**: Traefik auto-routes `framedle.gg`, `api.framedle.gg`, `auth.framedle.gg`
+- **Multi-app routing**: Traefik auto-routes `framedle.wtf`, `api.framedle.wtf`, `auth.framedle.wtf`
 
 ### Pricing
 
@@ -284,8 +284,8 @@ Setup: Logto needs its own PostgreSQL database (schema). Share the PostgreSQL in
 ```
 # Logto environment
 LOGTO_DB_URL=postgresql://logto:pass@localhost:5432/logto
-LOGTO_ENDPOINT=https://auth.framedle.gg
-LOGTO_ADMIN_ENDPOINT=https://auth-admin.framedle.gg
+LOGTO_ENDPOINT=https://auth.framedle.wtf
+LOGTO_ADMIN_ENDPOINT=https://auth-admin.framedle.wtf
 ```
 
 **Migration from Clerk**: If you ever used Clerk and want to migrate, Logto supports user import via API. The JWT format differs, so client SDKs need updating.
@@ -384,7 +384,7 @@ Sentry self-hosted is impossible on 8 GB. GlitchTip is purpose-built for small d
 
 ```python
 # In your Next.js app — same Sentry SDK, just point DSN to GlitchTip
-NEXT_PUBLIC_SENTRY_DSN=https://key@glitchtip.framedle.gg/1
+NEXT_PUBLIC_SENTRY_DSN=https://key@glitchtip.framedle.wtf/1
 ```
 
 ### Routing (Coolify + Traefik)
@@ -393,11 +393,11 @@ Coolify manages Traefik as its built-in reverse proxy. Domain routing is configu
 
 | Domain | Service | Set in Coolify |
 |--------|---------|----------------|
-| `framedle.gg` | Next.js app | Resource → Settings → Domains |
-| `api.framedle.gg` | Hono API | Resource → Settings → Domains |
-| `auth.framedle.gg` | Logto | Resource → Settings → Domains |
-| `analytics.framedle.gg` | Umami | Resource → Settings → Domains |
-| `errors.framedle.gg` | GlitchTip | Resource → Settings → Domains |
+| `framedle.wtf` | Next.js app | Resource → Settings → Domains |
+| `api.framedle.wtf` | Hono API | Resource → Settings → Domains |
+| `auth.framedle.wtf` | Logto | Resource → Settings → Domains |
+| `analytics.framedle.wtf` | Umami | Resource → Settings → Domains |
+| `errors.framedle.wtf` | GlitchTip | Resource → Settings → Domains |
 
 - **HTTPS**: Automatic via Let's Encrypt (or Cloudflare origin certs when proxied through CF)
 - **WebSocket**: Traefik handles WebSocket upgrade transparently for Duels
@@ -519,7 +519,7 @@ For each app service (Next.js, Hono API), connect the GitHub repo in Coolify:
 | Source | GitHub (Framedle repo) | GitHub (Framedle repo) |
 | Build pack | Dockerfile | Dockerfile |
 | Dockerfile path | `apps/web/Dockerfile` | `workers/api/Dockerfile` |
-| Domain | `framedle.gg` | `api.framedle.gg` |
+| Domain | `framedle.wtf` | `api.framedle.wtf` |
 | Auto-deploy on push | Yes (main branch) | Yes (main branch) |
 
 Environment variables for each service are set in Coolify's encrypted env var UI — never stored in files on the VPS.
@@ -539,7 +539,7 @@ services:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://framedle:pass@postgres:5432/framedle
       - REDIS_URL=redis://valkey:6379
-      - LOGTO_ENDPOINT=https://auth.framedle.gg
+      - LOGTO_ENDPOINT=https://auth.framedle.wtf
 
   api:
     build:
