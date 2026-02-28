@@ -40,8 +40,15 @@ export LOGTO_APP_SECRET="YOUR_LOGTO_APP_SECRET"
 # Linear (project management — CLI, MCP, and API)
 # ============================================================
 # Get your API key from: https://linear.app/settings/account/security
-# Used by: @linear/cli, linear MCP server, Linear API direct calls
+# Used by: @linear/cli, Linear API direct calls
 export LINEAR_API_KEY="lin_api_XXXX"
+
+# ============================================================
+# Exa (AI-powered web search — MCP server)
+# ============================================================
+# Get your API key from: https://exa.ai
+# Used by: exa MCP server for enhanced web search
+export EXA_API_KEY="YOUR_EXA_API_KEY"
 
 # ============================================================
 # Analytics & Error Tracking (VPS self-hosted)
