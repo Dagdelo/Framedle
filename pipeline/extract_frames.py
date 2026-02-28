@@ -99,6 +99,7 @@ def get_video_info(url: str) -> dict:
         "no_warnings": True,
         "skip_download": True,
         "extractor_args": {"youtube": {"player_client": ["web"]}},
+        "remote_components": {"ejs": "github"},
     }
 
     log.info(f"Extracting metadata for: {url}")
