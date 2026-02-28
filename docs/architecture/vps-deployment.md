@@ -408,7 +408,7 @@ Coolify manages Traefik as its built-in reverse proxy. Domain routing is configu
 Instead of Cloudflare Durable Objects, embed `ws` directly in the Hono API process:
 
 ```typescript
-// workers/api/src/duel.ts
+// apps/api/src/duel.ts
 import { WebSocketServer } from 'ws';
 
 const wss = new WebSocketServer({ noServer: true });
@@ -518,7 +518,7 @@ For each app service (Next.js, Hono API), connect the GitHub repo in Coolify:
 |---------|-------------|----------|
 | Source | GitHub (Framedle repo) | GitHub (Framedle repo) |
 | Build pack | Dockerfile | Dockerfile |
-| Dockerfile path | `apps/web/Dockerfile` | `workers/api/Dockerfile` |
+| Dockerfile path | `apps/web/Dockerfile` | `apps/api/Dockerfile` |
 | Domain | `framedle.wtf` | `api.framedle.wtf` |
 | Auto-deploy on push | Yes (main branch) | Yes (main branch) |
 
@@ -544,7 +544,7 @@ services:
   api:
     build:
       context: .
-      dockerfile: workers/api/Dockerfile
+      dockerfile: apps/api/Dockerfile
     environment:
       - DATABASE_URL=postgresql://framedle:pass@postgres:5432/framedle
       - REDIS_URL=redis://valkey:6379
@@ -749,6 +749,69 @@ If Framedle outgrows the VPS (>10K–20K DAU), migrate incrementally:
 | 5 | VPS only runs Logto + Valkey | Consider dropping VPS + Coolify entirely |
 
 Each step is independent. You don't have to migrate everything at once. The open-source services (Logto, Valkey) use standard protocols and can run anywhere.
+
+---
+
+## Mermaid Diagrams
+
+### Strategy A Deployment — Hybrid Architecture
+
+```mermaid
+flowchart TB
+    subgraph GHA[GitHub Actions — Free for Public Repos]
+        Pipeline[yt-dlp + ffmpeg<br/>Daily Cron 4 AM UTC]
+    end
+
+    subgraph CF[Cloudflare Free Tier]
+        CDN[CDN + DNS + DDoS + SSL]
+        R2[R2 Object Storage<br/>10 GB free · $0 egress<br/>Frames · Clips · Audio · OG images]
+    end
+
+    subgraph VPS[Hostinger KVM2 VPS — 2 vCPU / 8 GB / 100 GB NVMe]
+        subgraph Coolify[Coolify PaaS — Dashboard + Traefik]
+            Traefik[Traefik Reverse Proxy<br/>Auto HTTPS · Let's Encrypt]
+
+            NextJS[Next.js :3000<br/>400 MB · SSR + Game UI]
+            Hono[Hono API :4000<br/>200 MB · Game Logic + WS Duels]
+            Logto[Logto :3301<br/>250 MB · SSO + JWT]
+            Umami[Umami :3100<br/>250 MB · Analytics]
+            GlitchTip[GlitchTip :8000<br/>400 MB · Error Tracking]
+
+            PG[PostgreSQL 16 :5432<br/>1500 MB · shared_buffers=384MB]
+            Valkey[Valkey :6379<br/>256 MB · Leaderboards + Cache]
+        end
+    end
+
+    subgraph Backup[Backup Flow]
+        PGBackup[Coolify Scheduled Backup<br/>pg_dump → R2 Daily]
+        ValkeySnap[Valkey RDB Snapshots<br/>Every 15 min]
+    end
+
+    Internet((Internet)) -->|HTTPS| CDN
+    CDN -->|Origin Pull| Traefik
+    CDN <-->|Media Assets| R2
+
+    Traefik --> NextJS
+    Traefik --> Hono
+    Traefik --> Logto
+    Traefik --> Umami
+    Traefik --> GlitchTip
+
+    Hono --> PG
+    Hono --> Valkey
+    Hono -->|Signed URLs| R2
+    Logto --> PG
+    Umami --> PG
+    GlitchTip --> PG
+    GlitchTip --> Valkey
+
+    Pipeline -->|Upload frames| R2
+    Pipeline -->|Catalog metadata| Hono
+
+    PG --> PGBackup
+    Valkey --> ValkeySnap
+    PGBackup -->|Store| R2
+```
 
 ---
 

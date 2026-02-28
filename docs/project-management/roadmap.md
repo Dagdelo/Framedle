@@ -25,10 +25,10 @@ Phase 4: Growth              [Weeks 23-28]   ░░░░░░░░░░░�
 
 - Monorepo with Turborepo + shared packages
 - CI/CD pipeline (GitHub Actions)
-- Neon database provisioned with full schema
-- Cloudflare R2 bucket + Workers project
+- PostgreSQL (VPS) provisioned with full schema
+- Cloudflare R2 bucket + Hono API (Node.js) project
 - Content pipeline v1 (yt-dlp heatmap → frames → R2)
-- Clerk project configured with social providers
+- Logto configured with social providers
 - Design system foundation (Tailwind + base components)
 
 ### Deliverables
@@ -37,18 +37,18 @@ Phase 4: Growth              [Weeks 23-28]   ░░░░░░░░░░░�
 |------|-------------|
 | 1 | Monorepo setup (turbo.json, packages/ui, packages/game-engine, packages/shared) |
 | 1 | CI workflow (lint, type-check, test on PR) |
-| 2 | Neon provisioned, full schema deployed, Drizzle ORM configured |
+| 2 | PostgreSQL (VPS) provisioned, full schema deployed, Drizzle ORM configured |
 | 2 | R2 bucket created, CORS configured, signed URL generation verified |
-| 2 | Clerk application created, social providers configured |
-| 3 | Pipeline v1: yt-dlp → ffmpeg → R2 upload → Neon catalog |
-| 3 | Workers API: Hono skeleton, health check, Clerk middleware |
+| 2 | Logto application created, social providers configured |
+| 3 | Pipeline v1: yt-dlp → ffmpeg → R2 upload → PostgreSQL catalog |
+| 3 | Hono API (Node.js): Hono skeleton, health check, Logto middleware |
 | 3 | Seed content: 50+ videos processed, frames in R2 |
 
 ### Exit Criteria
 
 - [ ] Pipeline successfully processes 10+ videos/day
 - [ ] API returns a signed R2 frame URL
-- [ ] Clerk sign-in works in a test React app
+- [ ] Logto sign-in works in a test React app
 - [ ] CI passes on all packages
 - [ ] Design system components render in Storybook
 
@@ -57,7 +57,7 @@ Phase 4: Growth              [Weeks 23-28]   ░░░░░░░░░░░�
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|------------|
 | yt-dlp heatmap API changes | Medium | High | Pin yt-dlp version, monitor releases, fallback to evenly-spaced frames |
-| Neon cold start latency | Low | Medium | Use connection pooling, preconnect on app load |
+| PostgreSQL connection latency | Low | Medium | Use connection pooling (PgBouncer), preconnect on app load |
 | R2 CORS issues | Low | Low | Test with actual client origin early |
 
 ### Dependencies
@@ -72,7 +72,7 @@ Phase 4: Growth              [Weeks 23-28]   ░░░░░░░░░░░�
 
 ### Goals
 
-- Next.js web app deployed to Vercel/CF Pages
+- Next.js web app deployed to Coolify (VPS)
 - Daily Frame mode fully playable
 - Anonymous + registered user flows
 - Basic leaderboard (daily)
@@ -92,7 +92,7 @@ Phase 4: Growth              [Weeks 23-28]   ░░░░░░░░░░░�
 
 #### Week 6: Auth & Profiles
 
-- [ ] Clerk integration (sign-up, sign-in, sign-out)
+- [ ] Logto integration (sign-up, sign-in, sign-out)
 - [ ] Anonymous play with device fingerprint
 - [ ] Anonymous → registered account merge
 - [ ] User profile page (avatar, display name, country)
@@ -100,19 +100,19 @@ Phase 4: Growth              [Weeks 23-28]   ░░░░░░░░░░░�
 
 #### Week 7: Leaderboard & Sharing
 
-- [ ] Daily leaderboard backend (Redis sorted sets via Upstash)
+- [ ] Daily leaderboard backend (Valkey sorted sets)
 - [ ] Leaderboard UI (pagination, user highlight, tab navigation)
 - [ ] Share button → clipboard (emoji grid)
 - [ ] Share to Twitter (pre-formatted text + link)
-- [ ] Dynamic OG image generation (CF Worker + Satori/Resvg)
+- [ ] Dynamic OG image generation (Hono API (Node.js) + Satori/Resvg)
 - [ ] Share page (`/share/:gameId`) with SSR meta tags
 
 #### Week 8: Polish & Launch
 
 - [ ] Onboarding tutorial (first-time player)
 - [ ] Loading states, error handling, edge cases
-- [ ] Analytics integration (PostHog)
-- [ ] Error tracking (Sentry)
+- [ ] Analytics integration (Umami)
+- [ ] Error tracking (GlitchTip)
 - [ ] Performance optimization (Lighthouse 90+)
 - [ ] **Soft launch** — share with communities for feedback
 
@@ -128,9 +128,9 @@ Phase 4: Growth              [Weeks 23-28]   ░░░░░░░░░░░�
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|------------|
-| Search latency (pg_trgm on large dataset) | Medium | Medium | Cache top queries in KV, limit dataset to processed videos only |
+| Search latency (pg_trgm on large dataset) | Medium | Medium | Cache top queries in Valkey, limit dataset to processed videos only |
 | OG image generation complexity | Medium | Low | Use Satori template, cache in R2 |
-| Clerk integration edge cases (Tauri) | Low | Medium | Web-only for MVP, defer Tauri auth to Phase 3 |
+| Logto integration edge cases (Tauri) | Low | Medium | Web-only for MVP, defer Tauri auth to Phase 3 |
 
 ### Dependencies
 
@@ -223,7 +223,7 @@ Absorb delays from Phase 2. If on schedule, use for:
 
 ### Goals
 
-- Duels mode (real-time 1v1 via Durable Objects)
+- Duels mode (real-time 1v1 via ws library + Valkey state)
 - Tauri v2 desktop app (Windows, macOS, Linux)
 - Tauri v2 mobile app (iOS, Android)
 - View Count Blitz + Timeline Sort + Clip Guesser modes
@@ -233,9 +233,9 @@ Absorb delays from Phase 2. If on schedule, use for:
 
 #### Weeks 16-17: Duels Backend
 
-- [ ] Durable Object: `DuelMatch` (WebSocket handler, match state machine)
-- [ ] Matchmaking queue (Redis list + Worker polling)
-- [ ] Friend invite system (shareable link → same DO)
+- [ ] `DuelMatch` handler (WebSocket via ws library, match state machine, Valkey state)
+- [ ] Matchmaking queue (Valkey list + Hono API polling)
+- [ ] Friend invite system (shareable link → same match handler)
 - [ ] Server-side timestamp validation (anti-latency-cheat)
 - [ ] Duel results → leaderboard integration (ELO rating)
 
@@ -278,7 +278,7 @@ Absorb delays from Phase 2. If on schedule, use for:
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|------------|
 | Tauri mobile stability issues | Medium | High | Web-first approach, mobile is enhancement not blocker |
-| Durable Object WebSocket edge cases | Medium | Medium | Comprehensive timeout/disconnect handling, reconnection logic |
+| WebSocket edge cases (ws library) | Medium | Medium | Comprehensive timeout/disconnect handling, reconnection logic |
 | App store review delays (Apple) | High | Medium | Start TestFlight early (Week 19), iterate |
 | Cross-platform testing matrix | Medium | Medium | Focus on latest OS versions, set minimum requirements |
 
@@ -339,7 +339,7 @@ Absorb delays from Phase 3. If on schedule, use for:
 - [ ] Load testing (simulate 50K concurrent users)
 - [ ] Database query optimization (EXPLAIN ANALYZE all hot paths)
 - [ ] CDN cache hit rate optimization (target 95%+)
-- [ ] Monitoring dashboards (Grafana or CF Analytics)
+- [ ] Monitoring dashboards (Grafana or Umami Analytics)
 - [ ] Incident runbook (common issues + resolution steps)
 - [ ] App Store + Google Play production release
 - [ ] **Public launch** 🚀

@@ -21,14 +21,14 @@ Set up Turborepo monorepo with workspace packages: `apps/web`, `packages/ui`, `p
 
 ---
 
-### FRA-2 🔴 Neon Database Provisioning
+### FRA-2 🔴 PostgreSQL (VPS) Database Provisioning
 
-Create Neon project, configure branching for dev/staging/prod. Deploy the full database schema (10 tables: users, videos, frames, daily_games, game_results, achievements, user_achievements, duel_matches, leaderboard_snapshots + video_search materialized view). Set up connection pooling. Configure Drizzle ORM with schema types.
+Create PostgreSQL (VPS) instance via Coolify, configure separate databases for dev/staging/prod. Deploy the full database schema (10 tables: users, videos, frames, daily_games, game_results, achievements, user_achievements, duel_matches, leaderboard_snapshots + video_search materialized view). Set up connection pooling (PgBouncer). Configure Drizzle ORM with schema types.
 
 **Acceptance Criteria**:
-- Schema deployed to Neon dev branch
+- Schema deployed to PostgreSQL dev database
 - Drizzle schema types generated and match SQL schema
-- Connection pooling configured (5 connections per branch)
+- Connection pooling configured (PgBouncer, 5 connections per service)
 - Seed data (achievements) inserted successfully
 
 **Labels**: `database`, `infra` | **Estimate**: 3 points | **Depends on**: —
@@ -49,29 +49,29 @@ Create R2 bucket `framedle-content`. Configure CORS policy for web + Tauri origi
 
 ---
 
-### FRA-4 🔴 Cloudflare Workers API Project
+### FRA-4 🔴 Hono API (Node.js) Project
 
-Initialize Hono project in `workers/api/`. Set up `wrangler.toml` with R2 binding, KV namespace, Durable Object bindings, and environment variables. Deploy health check endpoint. Configure custom domain `api.framedle.wtf`.
+Initialize Hono project in `apps/api/`. Set up `Dockerfile` and `docker-compose.yml` with R2 env vars, Valkey connection, and environment variables. Deploy health check endpoint. Configure custom domain `api.framedle.wtf` via Coolify.
 
 **Acceptance Criteria**:
-- `wrangler dev` starts local development server
-- `/health` endpoint returns `{ status: "ok", region: "..." }`
-- R2 binding accessible from route handlers
-- Deployed to CF Workers with custom domain
+- `pnpm dev` starts local development server
+- `/health` endpoint returns `{ status: "ok", uptime: "..." }`
+- R2 credentials accessible from route handlers via env vars
+- Deployed to VPS via Coolify with custom domain
 
 **Labels**: `api`, `infra` | **Estimate**: 3 points | **Depends on**: FRA-3
 
 ---
 
-### FRA-5 🔴 Clerk Authentication Setup
+### FRA-5 🔴 Logto Authentication Setup
 
-Create Clerk application. Configure social providers (Google, Discord, Apple, GitHub, Twitter) + email/password + magic links. Set up webhook endpoint for `user.created` / `user.updated` / `user.deleted` events → sync to Neon. Test JWT verification in CF Worker middleware.
+Deploy Logto via Coolify. Configure social providers (Google, Discord, Apple, GitHub, Twitter) + email/password + magic links. Set up webhook endpoint for `user.created` / `user.updated` / `user.deleted` events → sync to PostgreSQL. Test JWT verification in Hono middleware.
 
 **Acceptance Criteria**:
-- Clerk sign-in modal renders with all providers
+- Logto sign-in UI renders with all providers
 - JWT verification works in Hono middleware (no DB call)
-- Webhook handler creates user record in Neon on signup
-- React hooks (`useUser`, `useAuth`) work in test app
+- Webhook handler creates user record in PostgreSQL on signup
+- React hooks (`useLogto`, `useUser`) work in test app
 
 **Labels**: `auth`, `infra` | **Estimate**: 3 points | **Depends on**: FRA-2, FRA-4
 
@@ -79,13 +79,13 @@ Create Clerk application. Configure social providers (Google, Discord, Apple, Gi
 
 ### FRA-6 🔴 Content Pipeline v1
 
-Port and enhance existing yt-dlp extraction script. Add: WebP conversion (Pillow), image variant generation (crops, pixelated, desaturated, fragments via ffmpeg), R2 upload via boto3, Neon catalog write (videos + frames tables). Create `pipeline.yml` GitHub Actions workflow with daily cron at 06:00 UTC.
+Port and enhance existing yt-dlp extraction script. Add: WebP conversion (Pillow), image variant generation (crops, pixelated, desaturated, fragments via ffmpeg), R2 upload via boto3, PostgreSQL catalog write (videos + frames tables). Create `pipeline.yml` GitHub Actions workflow with daily cron at 06:00 UTC.
 
 **Acceptance Criteria**:
 - Pipeline processes 10+ videos in a single run
 - All 15 frame variants generated per frame (WebP format)
 - Assets uploaded to R2 with correct folder structure
-- Video + frame metadata written to Neon
+- Video + frame metadata written to PostgreSQL
 - GitHub Actions workflow runs on schedule and manual trigger
 
 **Labels**: `pipeline`, `backend` | **Estimate**: 5 points | **Depends on**: FRA-2, FRA-3
@@ -122,12 +122,12 @@ Define TypeScript types for all game modes, guesses, results, and user stats in 
 
 ### FRA-9 🟠 CI/CD Pipeline
 
-GitHub Actions workflows: lint + type-check + test on PR. Auto-deploy: web → Vercel/CF Pages, Workers → CF Workers (wrangler), pipeline → manual trigger. Branch preview environments for web app. Status checks required for merge.
+GitHub Actions workflows: lint + type-check + test on PR. Auto-deploy: web → Coolify (VPS), Hono API (Node.js) → Coolify (VPS), pipeline → manual trigger. Branch preview environments for web app via Coolify. Status checks required for merge.
 
 **Acceptance Criteria**:
 - PR checks: lint, typecheck, test (must pass to merge)
-- Web app auto-deploys on push to main
-- Workers auto-deploy on push to main
+- Web app auto-deploys on push to main via Coolify
+- Hono API auto-deploys on push to main via Coolify
 - Preview URLs generated for PRs
 
 **Labels**: `infra`, `dx` | **Estimate**: 3 points | **Depends on**: FRA-1, FRA-4
@@ -152,14 +152,14 @@ Run the pipeline against a curated list of 50+ iconic YouTube videos across all 
 
 ### GAME-1 🔴 Daily Frame — Backend
 
-API endpoints: `GET /game/daily-frame/daily` (fetch today's game with initial frame URL), `POST /game/daily-frame/guess` (submit guess with HMAC session token, server validates). Implement progressive hint system (6 levels with different frame variants). Store game sessions and results in Neon. Redis daily lock (one play per user per day).
+API endpoints: `GET /game/daily-frame/daily` (fetch today's game with initial frame URL), `POST /game/daily-frame/guess` (submit guess with HMAC session token, server validates). Implement progressive hint system (6 levels with different frame variants). Store game sessions and results in PostgreSQL. Valkey daily lock (one play per user per day).
 
 **Acceptance Criteria**:
 - API returns today's game with signed frame URL
 - Guess validation is server-side only (answer never sent to client)
 - HMAC session token validated on each guess
-- Game result written to Neon on completion
-- Daily lock prevents replay (Redis SETNX)
+- Game result written to PostgreSQL on completion
+- Daily lock prevents replay (Valkey SETNX)
 
 **Labels**: `api`, `game-logic` | **Estimate**: 5 points | **Depends on**: FRA-4, FRA-5, FRA-6
 
@@ -197,12 +197,12 @@ XState v5 state machine for Daily Frame: `idle → loading → guessing → vali
 
 ### GAME-4 🟠 Video Search Endpoint
 
-`GET /api/search?q=...` — fuzzy search across video titles using PostgreSQL `pg_trgm` extension. Return top 10 matches with title, channel name, thumbnail URL. Target: <100ms response time. Cache top 1000 queries in Cloudflare KV (1h TTL).
+`GET /api/search?q=...` — fuzzy search across video titles using PostgreSQL `pg_trgm` extension. Return top 10 matches with title, channel name, thumbnail URL. Target: <100ms response time. Cache top 1000 queries in Valkey (1h TTL).
 
 **Acceptance Criteria**:
 - Fuzzy search returns relevant results for partial titles
 - Response time <100ms (P95)
-- Top 1000 queries cached in KV
+- Top 1000 queries cached in Valkey
 - Results include title, channel, and thumbnail
 - Handles edge cases (empty query, special characters)
 
@@ -294,7 +294,7 @@ Backend: serve .opus audio clip URL from R2. Pipeline: extract 5s audio at heatm
 
 ### USER-1 🔴 Anonymous User Flow
 
-Device fingerprint generation (hashed SHA-256). Local storage of game results (IndexedDB for web, SQLite for Tauri). Server-side storage keyed by fingerprint. Daily game lock via fingerprint+date in Redis. Rate limit: max 3 new anonymous identities per IP per day.
+Device fingerprint generation (hashed SHA-256). Local storage of game results (IndexedDB for web, SQLite for Tauri). Server-side storage keyed by fingerprint. Daily game lock via fingerprint+date in Valkey. Rate limit: max 3 new anonymous identities per IP per day.
 
 **Labels**: `auth`, `frontend` | **Estimate**: 3 points | **Depends on**: FRA-4
 
@@ -302,7 +302,7 @@ Device fingerprint generation (hashed SHA-256). Local storage of game results (I
 
 ### USER-2 🔴 Registration & SSO Flow
 
-Clerk sign-in/up modal integration. Post-registration webhook → create user record in Neon. JWT token automatically attached to all API requests via Clerk React SDK. Protected routes (profile, stats, friends) redirect to sign-in if not authenticated.
+Logto sign-in/up UI integration. Post-registration webhook → create user record in PostgreSQL. JWT token automatically attached to all API requests via Logto React SDK. Protected routes (profile, stats, friends) redirect to sign-in if not authenticated.
 
 **Labels**: `auth`, `full-stack` | **Estimate**: 3 points | **Depends on**: FRA-5
 
@@ -318,7 +318,7 @@ When a user registers, prompt to "claim" anonymous history. API endpoint: `POST 
 
 ### USER-4 🟠 User Profile Page
 
-Display name, avatar (Clerk-provided), country flag selector, level/title badge, XP progress bar, current streak display, total games played, favorite mode, join date. Editable fields: display name, country.
+Display name, avatar (Logto-provided), country flag selector, level/title badge, XP progress bar, current streak display, total games played, favorite mode, join date. Editable fields: display name, country.
 
 **Labels**: `frontend`, `api` | **Estimate**: 3 points | **Depends on**: USER-2
 
@@ -344,7 +344,7 @@ Per-mode breakdown: games played, win rate, average score, best score, average g
 
 ### LEAD-1 🔴 Daily Leaderboard Backend
 
-Upstash Redis sorted set per mode per day. On game completion: `ZADD lb:{mode}:{date} {score} {userId}`. Endpoints: `GET /leaderboard/:mode?period=daily` → top 100. `GET /leaderboard/:mode/me` → user rank + surrounding 5 above/below. TTL: 7 days per daily board.
+Valkey sorted set per mode per day. On game completion: `ZADD lb:{mode}:{date} {score} {userId}`. Endpoints: `GET /leaderboard/:mode?period=daily` → top 100. `GET /leaderboard/:mode/me` → user rank + surrounding 5 above/below. TTL: 7 days per daily board.
 
 **Labels**: `api`, `redis` | **Estimate**: 3 points | **Depends on**: FRA-4, GAME-1
 
@@ -360,7 +360,7 @@ Tabbed view: Daily / Weekly / All-Time / Friends / Country. User row always high
 
 ### LEAD-3 🟠 Weekly & All-Time Leaderboards
 
-Weekly: scheduled CF Worker cron (Sunday midnight UTC) aggregates daily scores via ZUNIONSTORE. All-Time: cumulative XP sorted set (ZINCRBY on each game). Friends: filtered by Clerk social connections (batch ZSCORE). Country: per-country sorted sets. Snapshot top 100 weekly to Neon.
+Weekly: scheduled Hono API cron (Sunday midnight UTC) aggregates daily scores via ZUNIONSTORE. All-Time: cumulative XP sorted set (ZINCRBY on each game). Friends: filtered by Logto social connections (batch ZSCORE). Country: per-country sorted sets. Snapshot top 100 weekly to PostgreSQL.
 
 **Labels**: `api`, `redis` | **Estimate**: 3 points | **Depends on**: LEAD-1
 
@@ -368,7 +368,7 @@ Weekly: scheduled CF Worker cron (Sunday midnight UTC) aggregates daily scores v
 
 ### LEAD-4 🟠 Share — Clipboard & Twitter
 
-Generate emoji grid text per mode (mode-specific templates from game-mechanics spec). Copy to clipboard button with success feedback. "Share to Twitter" → open tweet compose intent with pre-filled text + share page URL. Track share events in PostHog analytics.
+Generate emoji grid text per mode (mode-specific templates from game-mechanics spec). Copy to clipboard button with success feedback. "Share to Twitter" → open tweet compose intent with pre-filled text + share page URL. Track share events in Umami analytics.
 
 **Labels**: `frontend`, `social` | **Estimate**: 3 points | **Depends on**: GAME-2
 
@@ -376,7 +376,7 @@ Generate emoji grid text per mode (mode-specific templates from game-mechanics s
 
 ### LEAD-5 🟠 Share — Dynamic OG Image
 
-CF Worker: receives `share_hash` → looks up game result in Neon → generates PNG via Satori/Resvg (blurred frame background + score grid + streak + level badge). Cache generated image in R2 under `og/{share_hash}.png`. Meta tags on `/share/:gameId` page for rich link previews on Twitter/Discord/WhatsApp.
+Hono API (Node.js): receives `share_hash` → looks up game result in PostgreSQL → generates PNG via Satori/Resvg (blurred frame background + score grid + streak + level badge). Cache generated image in R2 under `og/{share_hash}.png`. Meta tags on `/share/:gameId` page for rich link previews on Twitter/Discord/WhatsApp.
 
 **Labels**: `api`, `social` | **Estimate**: 5 points | **Depends on**: LEAD-4, FRA-3
 
@@ -392,9 +392,9 @@ Web Share API for mobile web. Tauri share plugin for desktop/mobile native apps.
 
 ## Project: ⚔️ DUEL — Multiplayer
 
-### DUEL-1 🟠 Durable Object — DuelMatch
+### DUEL-1 🟠 WebSocket DuelMatch Handler
 
-Implement `DuelMatch` Durable Object class: WebSocket connection handler, match state machine (waiting → countdown → round → intermission → ... → result → cleanup), frame distribution (both players see same frame simultaneously), guess validation, server-side timestamping, timeout handling (30s per round).
+Implement `DuelMatch` WebSocket handler in Hono API (Node.js) using the `ws` library: WebSocket connection handler, match state machine (waiting → countdown → round → intermission → ... → result → cleanup), frame distribution (both players see same frame simultaneously), guess validation, server-side timestamping, timeout handling (30s per round). Match state stored in Valkey.
 
 **Labels**: `backend`, `realtime` | **Estimate**: 8 points | **Depends on**: FRA-4, GAME-1
 
@@ -402,7 +402,7 @@ Implement `DuelMatch` Durable Object class: WebSocket connection handler, match 
 
 ### DUEL-2 🟠 Matchmaking System
 
-Redis queue for matchmaking: `LPUSH` player to queue, Worker polls queue every 2s, pairs first two players, creates Durable Object. Friend invite: generate unique link (UUID) → second player joins same DO via link. Handle queue timeout: 30s in queue → cancel and notify player.
+Valkey queue for matchmaking: `LPUSH` player to queue, Hono API polls queue every 2s, pairs first two players, creates WebSocket match handler. Friend invite: generate unique link (UUID) → second player joins same match handler via link. Handle queue timeout: 30s in queue → cancel and notify player.
 
 **Labels**: `backend`, `api` | **Estimate**: 5 points | **Depends on**: DUEL-1
 
@@ -470,7 +470,7 @@ Apple App Store submission: screenshots (6.7", 6.1", iPad), description, keyword
 
 ### OPS-1 🟠 Analytics Integration
 
-PostHog setup: track events: `game_started`, `guess_submitted`, `game_completed`, `share_clicked`, `mode_selected`, `signup_completed`, `duel_matched`, `achievement_unlocked`. Funnels: visit → play → complete → share. Retention cohorts: day-1, day-7, day-30.
+Umami setup: track events: `game_started`, `guess_submitted`, `game_completed`, `share_clicked`, `mode_selected`, `signup_completed`, `duel_matched`, `achievement_unlocked`. Funnels: visit → play → complete → share. Retention cohorts: day-1, day-7, day-30.
 
 **Labels**: `analytics`, `infra` | **Estimate**: 3 points | **Depends on**: FRA-1
 
@@ -478,7 +478,7 @@ PostHog setup: track events: `game_started`, `guess_submitted`, `game_completed`
 
 ### OPS-2 🟠 Error Tracking
 
-Sentry integration for: Next.js web app, CF Workers API, Tauri desktop + mobile. Source maps upload in CI (automatic on deploy). Alert rules: error rate spike (>2× baseline), API P99 latency >500ms, pipeline failure notification.
+GlitchTip integration for: Next.js web app, Hono API (Node.js), Tauri desktop + mobile. Source maps upload in CI (automatic on deploy). Alert rules: error rate spike (>2× baseline), API P99 latency >500ms, pipeline failure notification.
 
 **Labels**: `monitoring`, `infra` | **Estimate**: 2 points | **Depends on**: FRA-1, FRA-4
 
@@ -486,7 +486,7 @@ Sentry integration for: Next.js web app, CF Workers API, Tauri desktop + mobile.
 
 ### OPS-3 🟡 Load Testing
 
-Simulate 50K concurrent users using k6 or Artillery. Test scenarios: daily game play (load → guess × 6 → share), leaderboard reads, search queries, duel matchmaking. Measure: API response times (P50, P95, P99), Redis throughput, Neon connection saturation, R2 CDN cache hit rates. Document bottlenecks and mitigations.
+Simulate 50K concurrent users using k6 or Artillery. Test scenarios: daily game play (load → guess × 6 → share), leaderboard reads, search queries, duel matchmaking. Measure: API response times (P50, P95, P99), Valkey throughput, PostgreSQL (VPS) connection saturation, R2 CDN cache hit rates. Document bottlenecks and mitigations.
 
 **Labels**: `performance`, `infra` | **Estimate**: 3 points | **Depends on**: GAME-1, LEAD-1
 
@@ -530,12 +530,12 @@ FRA-1 (Monorepo) ──┬── FRA-7 (Design System) ──── GAME-2 (Dail
                    ├── FRA-8 (Game Engine) ──────── GAME-3 (State Machine)
                    └── FRA-9 (CI/CD)
 
-FRA-2 (Neon) ──┬── FRA-5 (Clerk) ──── USER-2 (SSO) ──── USER-3 (Merge)
-               └── FRA-6 (Pipeline) ──── FRA-10 (Seed Content)
+FRA-2 (PostgreSQL) ──┬── FRA-5 (Logto) ──── USER-2 (SSO) ──── USER-3 (Merge)
+                     └── FRA-6 (Pipeline) ──── FRA-10 (Seed Content)
 
-FRA-3 (R2) ──── FRA-4 (Workers) ──── GAME-1 (Daily Frame API) ──┬── GAME-2
-                                                                  ├── LEAD-1 (Leaderboard)
-                                                                  └── DUEL-1 (Duels)
+FRA-3 (R2) ──── FRA-4 (Hono API) ──── GAME-1 (Daily Frame API) ──┬── GAME-2
+                                                                   ├── LEAD-1 (Leaderboard)
+                                                                   └── DUEL-1 (Duels)
 ```
 
 **Critical path**: FRA-1 → FRA-7 → GAME-2 → GAME-5+ (extended modes)

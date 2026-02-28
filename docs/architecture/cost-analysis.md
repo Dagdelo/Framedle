@@ -1,6 +1,51 @@
-# Cost Analysis — Free Tier to Scale
+# Cost Analysis — VPS Primary Deployment + Cloud Migration Path
 
-## TL;DR
+## Primary Deployment: VPS (Fixed Cost)
+
+Framedle launches on a **Hostinger KVM2 VPS** running Coolify. This is a fixed-cost model that does not scale with users — you pay the same whether you have 10 or 5,000 DAU.
+
+| Component | Cost |
+|-----------|------|
+| Hostinger KVM2 VPS | $7–18/mo (billing cycle dependent) |
+| Cloudflare free tier (CDN + DNS + DDoS) | $0 |
+| Cloudflare R2 (10 GB media, $0 egress) | $0 |
+| GitHub Actions (public repo, CI/CD + pipeline) | $0 |
+| Domain (framedle.wtf) | ~$1/mo |
+| **Total fixed cost** | **$8–19/mo** |
+
+This fixed cost holds until ~3,000–5,000 DAU. At that point, upgrade to KVM4 (~$15–26/mo) for roughly double the capacity. See `docs/architecture/vps-deployment.md` for full stack details, RAM budget, and upgrade path.
+
+The VPS runs the full open-source stack: **PostgreSQL 16, Valkey (Redis-compatible), Logto (auth), Hono API (Node.js), Next.js, Umami (analytics), GlitchTip (error tracking)**. None of these have per-user or per-request charges.
+
+### VPS vs Cloud Cost Comparison
+
+| DAU | VPS (Strategy A) | Cloud-Only | Notes |
+|-----|-----------------|------------|-------|
+| 500 | **$8** | ~$1 | Cloud cheaper at very low scale (free tiers) |
+| 1,000 | **$8** | ~$7 | Roughly similar |
+| 3,000 | **$8** | ~$32 | **VPS saves $24/mo** |
+| 5,000 | **$8–15** | ~$32 | **VPS saves $17–24/mo** |
+| 10,000 | **$15** (KVM4) | ~$82 | **VPS saves $67/mo** |
+| 20,000+ | Multi-server needed | ~$215 | Cloud auto-scaling becomes attractive |
+
+The VPS eliminates the first four cloud migration triggers entirely:
+
+| Cloud Trigger | Cloud Cost | VPS Equivalent | VPS Cost |
+|---------------|-----------|----------------|----------|
+| Trigger #1: Upstash Redis | $1–9/mo (pay-as-you-go) | Valkey (self-hosted) | $0 |
+| Trigger #2: CF Workers Paid | $5/mo | Hono on Node.js (VPS process) | $0 |
+| Trigger #3: Neon PostgreSQL | $15–150/mo | PostgreSQL 16 (self-hosted) | $0 |
+| Trigger #4: Clerk auth | $0 → $675/mo | Logto (self-hosted, no user limits) | $0 |
+
+The first real cost pressure on the VPS is CPU at ~3,000–5,000 DAU, addressed by upgrading to KVM4 for ~$7/mo more — not a per-user charge.
+
+---
+
+## Cloud Migration Cost Model
+
+The sections below document the **cloud-only architecture** cost model. This applies if Framedle migrates off the VPS to fully managed services (Upstash Redis, Cloudflare Workers, Neon PostgreSQL, Clerk). Migration triggers and costs are documented here for planning purposes.
+
+### Cloud TL;DR
 
 | Scale (DAU) | Monthly Cost | Bottleneck Service | Action Required |
 |-------------|-------------|-------------------|-----------------|
@@ -12,7 +57,7 @@
 | 50,000–100,000 | **$180–400** | Even scaling | All services on paid tiers |
 | 100,000–1,000,000 | **$400–1,200** | Redis + Workers volume | Consider fixed Redis plan |
 
-The architecture is designed to run entirely on free tiers through soft launch and early growth. The first dollar is spent around **500–1,000 DAU**, on Redis.
+The cloud architecture is designed to run entirely on free tiers through soft launch and early growth. The first dollar is spent around **500–1,000 DAU**, on Redis.
 
 ---
 
@@ -593,9 +638,9 @@ $1,000 ┤                                                        ╭──╯
 
 3. **First real cost at ~1K DAU is ~$7/mo**: Redis pay-as-you-go + Workers Paid. Extremely affordable for a growing product.
 
-4. **$100/mo ceiling holds to ~20K DAU**: The edge-first serverless architecture with aggressive caching keeps costs remarkably low through significant growth.
+4. **$100/mo ceiling holds to ~20K DAU**: The cloud architecture with aggressive caching keeps costs remarkably low through significant growth.
 
-5. **Clerk is the long-term cost driver**: At 100K+ DAU, auth becomes 60%+ of total cost. Plan for self-hosted auth migration if costs become prohibitive.
+5. **Auth is the long-term cost driver**: At 100K+ DAU, managed auth becomes 60%+ of total cost. The VPS-first approach uses self-hosted Logto to avoid this entirely.
 
 6. **R2's $0 egress is the architectural advantage**: An image-heavy game serving millions of frames would cost 10–50x more on AWS S3 ($0.09/GB egress). R2 makes this architecture viable.
 

@@ -1,7 +1,7 @@
 # ADR-008: Anonymous Identity — Device Fingerprinting
 
 **Status**: Accepted
-**Date**: 2025-02-22
+**Date**: 2026-02-22
 **Deciders**: Core team
 **Category**: Identity & Privacy
 

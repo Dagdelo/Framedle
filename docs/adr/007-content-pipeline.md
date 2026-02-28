@@ -170,7 +170,7 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - run: python pipeline/extract_batch.py
         env:
-          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
           R2_ACCESS_KEY: ${{ secrets.R2_ACCESS_KEY_ID }}
           R2_SECRET_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
@@ -200,6 +200,16 @@ jobs:
 - 10 min/day is well within rate limits
 - Post-workflow notification via Slack webhook for monitoring
 - Can migrate to a self-hosted runner if GitHub becomes a bottleneck
+
+## Status Update (2026-02-28)
+
+The deployment strategy has evolved since this ADR was written. References to "Neon PostgreSQL" in the pipeline flow above refer to **PostgreSQL 16** — the self-hosted VPS instance serves the same role. The pipeline design is unchanged; only the database provider differs.
+
+**What changed:**
+- **Database**: Self-hosted PostgreSQL 16 on the VPS replaces Neon. Connection string changes from Neon's pooled URL to the VPS PostgreSQL URL.
+- **GitHub Actions secret**: `NEON_DATABASE_URL` → `DATABASE_URL` (pointing to VPS PostgreSQL).
+- **Pipeline architecture**: Unchanged. GitHub Actions still runs yt-dlp + ffmpeg, uploads to R2, and catalogs to PostgreSQL. The pipeline is provider-agnostic — it uses standard `psycopg2` / SQL, not Neon-specific features.
+- **Neon as migration option**: If the project migrates to a fully managed cloud stack, Neon PostgreSQL is the documented database target. See `docs/architecture/vps-deployment.md`.
 
 ## References
 

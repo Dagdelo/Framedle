@@ -25,13 +25,13 @@ Framedle needs authentication supporting:
 | Social SSO | All major providers | Good coverage | Good coverage | Manual per provider |
 | Edge JWT verification | ✅ No DB call | ❌ DB sessions | ⚠️ Complex | ❌ |
 | Anonymous→registered | ✅ Custom claims | Manual | Manual | Manual |
-| Free tier | 10K MAU | Unlimited (self-host) | 50K MAU | Unlimited (self-host) |
+| Free tier | 50K MRU | Unlimited (self-host) | 50K MAU | Unlimited (self-host) |
 | Tauri compatibility | ✅ | ⚠️ Next.js coupled | ⚠️ Supabase coupled | ✅ |
 | Implementation effort | Days | Weeks | Weeks | Months |
 
 ## Decision
 
-**Clerk** — best developer experience, pre-built components, seamless anonymous→registered upgrade flow, and edge-compatible JWT verification. The free tier (10K MAU) covers our launch phase.
+**Clerk** — best developer experience, pre-built components, seamless anonymous→registered upgrade flow, and edge-compatible JWT verification. The free tier (50K MRU) covers our launch phase.
 
 ## Implementation
 
@@ -142,11 +142,22 @@ POST /api/webhooks/clerk
 
 ### Cost Projection
 
-| MAU | Monthly Cost |
+| MRU | Monthly Cost |
 |-----|-------------|
-| 0 - 10,000 | $0 (free) |
-| 10,001 - 100,000 | $25 |
-| 100,001 - 1,000,000 | $100 |
+| 0 - 50,000 | $0 (free) |
+| 50,001 - 100,000 | $25 |
+| 100,001+ | $25 + $0.02/MRU overage |
+
+## Status Update (2026-02-28)
+
+The deployment strategy has evolved since this ADR was written. The primary deployment now runs on a **Hostinger KVM2 VPS** using **Logto (self-hosted)** as the auth provider from day one, rather than Clerk.
+
+**What changed:**
+- **Primary auth**: Logto (self-hosted on VPS) replaces Clerk as the default. Logto offers the same Social SSO providers (Google, Discord, GitHub, Apple), pre-built UI components, standard JWT verification, and MFA — at $0 forever with no per-user pricing.
+- **Clerk as cloud migration option**: Clerk remains the documented path if the project migrates off the VPS to a fully managed cloud stack. The evaluation in this ADR (developer experience, SDK quality, anonymous→registered flow) still applies.
+- **Free tier correction**: Clerk's free tier is **50K MRU (Monthly Retained Users)**, not "10K MAU" as originally stated. This has been corrected throughout the document. The original figure was inaccurate at the time of writing; the higher limit makes Clerk even more viable as a migration target.
+
+This ADR is not invalidated — it accurately describes the tradeoffs between hosted auth providers. The decision to lead with Logto is driven by cost predictability (no per-user ceiling) and the VPS deployment strategy documented in `docs/architecture/vps-deployment.md`.
 
 ## References
 
@@ -154,3 +165,5 @@ POST /api/webhooks/clerk
 - [Clerk + Cloudflare Workers](https://clerk.com/docs/deployments/clerk-edge)
 - [Clerk Pricing](https://clerk.com/pricing)
 - [Clerk Webhooks](https://clerk.com/docs/integrations/webhooks)
+- [Logto Documentation](https://docs.logto.io)
+- [VPS Deployment — Logto section](../architecture/vps-deployment.md)

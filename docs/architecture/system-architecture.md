@@ -2,7 +2,9 @@
 
 ## High-Level Overview
 
-Framedle uses an **edge-first serverless architecture** for global low-latency gameplay. Three domains: **Client Apps**, **Backend Services**, **Content Pipeline**.
+Framedle uses a **VPS-first hybrid architecture** for cost-effective, self-hosted deployment with cloud services used only where they provide clear advantages (CDN, media storage, CI/CD). Three domains: **Client Apps**, **Backend Services**, **Content Pipeline**.
+
+> For cloud-only deployment, see migration path in [vps-deployment.md](vps-deployment.md).
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
@@ -22,25 +24,33 @@ Framedle uses an **edge-first serverless architecture** for global low-latency g
                         HTTPS / WS
                              │
 ┌────────────────────────────┴───────────────────────────────────────┐
-│                       BACKEND SERVICES                              │
+│                  CLOUDFLARE (CDN / PROXY LAYER)                     │
+│                                                                      │
+│  DNS + CDN proxy + DDoS protection + SSL                            │
+│  Cache: static assets, frame images, API responses                  │
+│  R2: frame images, clips, audio, OG images (10 GB free, $0 egress) │
+└────────────────────────────┬───────────────────────────────────────┘
+                             │ Origin pull
+┌────────────────────────────┴───────────────────────────────────────┐
+│                   BACKEND SERVICES (Hostinger KVM2 VPS)             │
 │                                                                      │
 │  ┌─────────────────────────────────────────────────────────────┐    │
-│  │  Cloudflare Workers (Hono)                                   │    │
+│  │  Hono (Node.js — api.framedle.wtf :4000)                    │    │
 │  │                                                               │    │
 │  │  /api/game/:mode/daily     → fetch today's challenge          │    │
 │  │  /api/game/:mode/guess     → submit guess (server validates)  │    │
-│  │  /api/leaderboard/:mode    → rankings (Redis sorted sets)     │    │
-│  │  /api/user/profile         → user data (Clerk + Neon)         │    │
+│  │  /api/leaderboard/:mode    → rankings (Valkey sorted sets)    │    │
+│  │  /api/user/profile         → user data (Logto + PostgreSQL)   │    │
 │  │  /api/share/:gameId        → dynamic OG image generation      │    │
-│  │  /api/duel/match           → WebSocket upgrade → Durable Obj  │    │
+│  │  /api/duel/match/:id       → WebSocket via ws + Valkey state  │    │
 │  └──────┬────────────────┬────────────────┬─────────────────────┘    │
 │         │                │                │                          │
 │  ┌──────┴──────┐  ┌──────┴──────┐  ┌─────┴──────┐  ┌────────────┐  │
-│  │   Clerk     │  │  Neon       │  │ Upstash    │  │ CF R2      │  │
-│  │   (Auth)    │  │  (Postgres) │  │ Redis      │  │ (Images)   │  │
-│  │             │  │             │  │ (Cache +   │  │            │  │
-│  │  SSO, JWT   │  │  Users,     │  │  Leaderb.) │  │  Frames,   │  │
-│  │  Anonymous  │  │  Games,     │  │            │  │  Clips,    │  │
+│  │   Logto     │  │ PostgreSQL  │  │  Valkey    │  │ CF R2      │  │
+│  │   (Auth)    │  │  16 (VPS)   │  │  (VPS)     │  │ (Images)   │  │
+│  │             │  │             │  │            │  │            │  │
+│  │  SSO, JWT   │  │  Users,     │  │  Cache +   │  │  Frames,   │  │
+│  │  Anonymous  │  │  Games,     │  │  Leaderb.  │  │  Clips,    │  │
 │  │  → Upgrade  │  │  Frames,    │  │            │  │  Audio     │  │
 │  │             │  │  Stats      │  │            │  │            │  │
 │  └─────────────┘  └─────────────┘  └────────────┘  └────────────┘  │
@@ -54,8 +64,8 @@ Framedle uses an **edge-first serverless architecture** for global low-latency g
 │                                                                      │
 │  ┌──────────┐   ┌──────────────┐   ┌──────────┐   ┌─────────────┐  │
 │  │  Video   │──>│   yt-dlp     │──>│  ffmpeg  │──>│  Upload to  │  │
-│  │  Lists   │   │  (metadata + │   │  (frames │   │  R2 + Neon  │  │
-│  │  (curate │   │   heatmap)   │   │  + crops │   │             │  │
+│  │  Lists   │   │  (metadata + │   │  (frames │   │  R2 +       │  │
+│  │  (curate │   │   heatmap)   │   │  + crops │   │  PostgreSQL │  │
 │  │   + API) │   │              │   │  + pixel)│   │  + Assign   │  │
 │  └──────────┘   └──────────────┘   └──────────┘   │  game seeds │  │
 │                                                     └─────────────┘  │
@@ -92,8 +102,7 @@ framedle/
 │   ├── api-client/             # Typed HTTP client (generated from OpenAPI)
 │   └── shared/                 # Constants, utils, validators
 ├── workers/
-│   ├── api/                    # Main Hono API worker
-│   ├── duel-coordinator/       # Durable Object for multiplayer
+│   ├── api/                    # Main Hono API (Node.js on VPS)
 │   └── og-image/               # Share image generator
 ├── pipeline/
 │   ├── extract_frames.py       # Main extraction script
@@ -133,7 +142,7 @@ GET  /api/game/:mode/result/:gameId
 
 ```
 GET  /api/leaderboard/:mode?period=daily|weekly|alltime&limit=100
-     → Returns ranked list from Redis sorted sets
+     → Returns ranked list from Valkey sorted sets
 
 GET  /api/leaderboard/:mode/me
      → Current user's rank + surrounding players
@@ -156,7 +165,7 @@ GET   /api/user/achievements     → Achievement list + progress
 ```
 POST  /api/duel/queue            → Enter matchmaking queue
 POST  /api/duel/invite           → Generate invite link
-WS    /api/duel/match/:matchId   → WebSocket upgrade to Durable Object
+WS    /api/duel/match/:matchId   → WebSocket via ws library + Valkey-backed state
 ```
 
 ---
@@ -165,19 +174,22 @@ WS    /api/duel/match/:matchId   → WebSocket upgrade to Durable Object
 
 ```
 ┌─────────────┐                          ┌─────────────┐
-│   Client    │                          │    Clerk    │
-│             │──── 1. Start SSO ───────>│             │
-│             │                          │  (Google,   │
-│             │<── 2. JWT Token ─────────│   Discord,  │
-│             │                          │   Apple...) │
+│   Client    │                          │    Logto    │
+│             │──── 1. Start SSO ───────>│  (self-     │
+│             │                          │   hosted)   │
+│             │<── 2. JWT Token ─────────│             │
+│             │                          │  Google,    │
+│             │                          │  Discord,   │
+│             │                          │  Apple...   │
 │             │                          └─────────────┘
 │             │
 │             │──── 3. API Request ──────>┌─────────────┐
-│             │     Authorization:        │  CF Worker  │
-│             │     Bearer <jwt>          │             │
-│             │                          │ 4. Verify   │
-│             │<── 5. Response ──────────│    JWT via   │
-│             │                          │    Clerk SDK │
+│             │     Authorization:        │  Hono API   │
+│             │     Bearer <jwt>          │  (Node.js)  │
+│             │                          │             │
+│             │<── 5. Response ──────────│ 4. Verify   │
+│             │                          │    JWT       │
+│             │                          │    (standard)│
 └─────────────┘                          └─────────────┘
 ```
 
@@ -265,9 +277,180 @@ ffmpeg -ss {ts} -t 5 -i {url} -vn -c:a libopus -b:a 96k a01_5s.opus
 
 | Component | Strategy | Capacity |
 |-----------|----------|----------|
-| API | CF Workers (auto-scale, 300+ PoPs) | Unlimited |
-| Database | Neon (autoscaling 0→N CU) | 100K+ concurrent |
+| API | Hono on Node.js (VPS, 2 vCPU) | ~3,000–5,000 DAU |
+| Database | PostgreSQL 16 (VPS, shared_buffers=384 MB) | ~3,000–5,000 DAU |
 | Images | R2 + CF CDN (edge cached) | Unlimited |
-| Leaderboard | Redis sorted sets O(log N) | Millions of entries |
-| Duels | Durable Objects (per-match) | 10K+ concurrent matches |
+| Leaderboard | Valkey sorted sets O(log N), 256 MB max | Millions of entries |
+| Duels | ws library (per-match in-memory, Valkey-backed) | ~100 concurrent matches |
 | Pipeline | GitHub Actions (6h limit) | 100+ videos/day |
+| Upgrade path | KVM4 (4 vCPU / 16 GB) | ~10,000–15,000 DAU |
+
+> See [vps-deployment.md](vps-deployment.md) for detailed RAM budgets, CPU bottleneck analysis, and the migration path to cloud services when VPS capacity is exceeded.
+
+---
+
+## Mermaid Diagrams
+
+### C4 Context — System Overview
+
+```mermaid
+graph TB
+    Player[Player<br/>Web/Desktop/Mobile]
+    CF[Cloudflare<br/>CDN + DNS + DDoS]
+    VPS[Hostinger KVM2 VPS<br/>Coolify PaaS]
+    R2[Cloudflare R2<br/>Media Storage]
+    GHA[GitHub Actions<br/>Content Pipeline]
+
+    Player -->|HTTPS| CF
+    CF -->|Origin Pull| VPS
+    CF -->|Media Assets| R2
+    GHA -->|Upload Frames| R2
+    GHA -->|Catalog Metadata| VPS
+```
+
+### C4 Container — VPS Services
+
+```mermaid
+graph TB
+    subgraph CF_Layer[Cloudflare Layer]
+        CDN[CDN + DDoS + SSL]
+        R2[R2 Media Storage]
+    end
+
+    subgraph VPS[Hostinger KVM2 VPS — Coolify PaaS]
+        Traefik[Traefik Reverse Proxy<br/>Auto HTTPS · Entry Point]
+
+        subgraph Apps[Application Containers]
+            NextJS[Next.js :3000<br/>SSR · Game UI · Share Pages]
+            Hono[Hono API :4000<br/>Game Logic · Auth · DB]
+        end
+
+        subgraph Auth_Analytics[Auth and Observability]
+            Logto[Logto :3301<br/>SSO · JWT · Anonymous]
+            Umami[Umami :3100<br/>Privacy Analytics]
+            GlitchTip[GlitchTip :8000<br/>Error Tracking]
+        end
+
+        subgraph Data[Data Layer]
+            PG[PostgreSQL :5432<br/>Users · Games · Results]
+            Valkey[Valkey :6379<br/>Leaderboards · Cache · Locks]
+        end
+
+        Traefik --> NextJS
+        Traefik --> Hono
+        Traefik --> Logto
+        Traefik --> Umami
+        Traefik --> GlitchTip
+
+        Hono --> PG
+        Hono --> Valkey
+        Hono --> Logto
+        NextJS --> Hono
+        Logto --> PG
+        Umami --> PG
+        GlitchTip --> PG
+        GlitchTip --> Valkey
+    end
+
+    CDN -->|Origin Pull| Traefik
+    Hono -->|Signed URLs| R2
+```
+
+### Game Lifecycle — Daily Frame Sequence
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant A as Hono API
+    participant DB as PostgreSQL
+    participant R2 as Cloudflare R2
+
+    C->>A: GET /api/game/daily_frame/daily
+    A->>DB: SELECT daily_games WHERE date=today AND mode='daily_frame'
+    DB-->>A: game config + video_id + seed
+    A->>DB: CHECK game_results (already played?)
+    DB-->>A: no result found
+    A-->>C: gameId + firstFrameUrl (signed) + hintsAvailable
+
+    C->>R2: GET frame image (signed URL)
+    R2-->>C: frame.webp
+
+    loop Guess Loop (max 6 attempts)
+        C->>A: POST /api/game/daily_frame/guess { gameId, guess, timestamp }
+        A->>DB: VERIFY gameId + validate HMAC
+        DB-->>A: valid session
+        A->>A: compare guess to answer (server-side, never exposed)
+        alt Correct guess
+            A->>DB: INSERT game_results (score, guesses_used, won=true)
+            A-->>C: correct=true + score + shareHash
+        else Wrong guess, attempts < 6
+            A-->>C: correct=false + nextFrameUrl (signed) + attemptsLeft
+            C->>R2: GET next hint frame
+            R2-->>C: hint_frame.webp
+        else Wrong guess, attempts = 6
+            A->>DB: INSERT game_results (score=0, won=false)
+            A-->>C: correct=false + revealed=true + answerVideoId + shareHash
+        end
+    end
+```
+
+### Auth Flow — Anonymous and Registered
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant A as Hono API
+    participant L as Logto
+    participant DB as PostgreSQL
+    participant V as Valkey
+
+    Note over C,V: Anonymous Flow
+    C->>C: generate device fingerprint (hashed)
+    C->>A: POST /api/game/daily_frame/guess { fingerprint, ... }
+    A->>V: SETNX lock:anon:{fingerprint}:{date}:{mode}
+    V-->>A: OK (first play) or ALREADY_EXISTS
+    A->>DB: INSERT game_results (anon_fingerprint=fp, user_id=null)
+    DB-->>A: result saved
+    A-->>C: game result
+
+    Note over C,L: Registered Flow
+    C->>L: Start SSO (Google / Discord / Apple)
+    L-->>C: JWT access token
+    C->>A: API request Authorization Bearer JWT
+    A->>L: Verify JWT (JWKS)
+    L-->>A: valid + user claims
+    A->>DB: SELECT users WHERE auth_provider_id = sub
+    DB-->>A: user record
+    A-->>C: authenticated response
+
+    Note over C,DB: Anonymous to Registered Upgrade
+    C->>A: POST /api/user/claim-anonymous { fingerprint, jwt }
+    A->>L: Verify JWT
+    L-->>A: valid user
+    A->>DB: UPDATE game_results SET user_id=userId WHERE anon_fingerprint=fp
+    A->>DB: UPDATE users SET anon_fingerprint=null WHERE id=userId
+    DB-->>A: merge complete
+    A-->>C: { merged: N games claimed }
+```
+
+### Package Dependency Graph
+
+```mermaid
+graph TD
+    web[apps/web<br/>Next.js 15]
+    api[apps/api<br/>Hono Node.js]
+    ui[packages/ui<br/>React Components]
+    engine[packages/game-engine<br/>State Machines + Scoring]
+    client[packages/api-client<br/>Typed HTTP Client]
+    shared[packages/shared<br/>Types + Validators + Utils]
+
+    web --> ui
+    web --> engine
+    web --> client
+    api --> engine
+    api --> shared
+    ui --> shared
+    ui --> engine
+    engine --> shared
+    client --> shared
+```

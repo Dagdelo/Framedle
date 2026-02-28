@@ -1,7 +1,7 @@
 # ADR-009: Leaderboard Architecture — Redis Sorted Sets
 
 **Status**: Accepted
-**Date**: 2025-02-22
+**Date**: 2026-02-22
 **Deciders**: Core team
 **Category**: Data Architecture
 
@@ -248,9 +248,20 @@ Expired boards are automatically cleaned up by Redis. Historical records survive
 | 50K | ~250K | $30/mo |
 | 100K | ~500K | $50/mo |
 
+## Status Update (2026-02-28)
+
+The deployment strategy has evolved since this ADR was written. The selected technology — **Redis Sorted Sets** — is unchanged. The provider has changed from Upstash to **Valkey** (self-hosted, Redis-compatible).
+
+**What changed:**
+- **Provider**: Self-hosted Valkey 8 on the VPS replaces Upstash Redis. Valkey is wire-compatible with Redis — all sorted set commands (`ZADD`, `ZREVRANK`, `ZREVRANGE`) work identically.
+- **Auth provider**: References to "Clerk social connections" in the friends leaderboard section now apply to **Logto** (self-hosted). The social connection API differs but the leaderboard architecture is unchanged.
+- **No REST API constraint**: On the VPS, the API server connects to Valkey via standard TCP (ioredis), not Upstash's REST API. This removes the Cloudflare Workers compatibility concern from the original decision rationale.
+- **Cost model**: Valkey is self-hosted at $0 (included in VPS). The Upstash cost projections in this ADR apply only to the cloud migration path.
+- **Upstash as migration option**: If the project migrates to a fully managed cloud stack, Upstash Redis is the documented cache target. See `docs/architecture/vps-deployment.md`.
+
 ## References
 
 - [Redis Sorted Sets](https://redis.io/docs/data-types/sorted-sets/)
-- [Upstash Redis](https://upstash.com/docs/redis/overall/getstarted)
+- [Valkey](https://valkey.io/)
 - [Building Game Leaderboards with Redis](https://redis.com/solutions/use-cases/leaderboards/)
 - [ELO Rating System](https://en.wikipedia.org/wiki/Elo_rating_system)

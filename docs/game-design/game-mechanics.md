@@ -174,7 +174,7 @@ Achievements with numeric conditions show progress (e.g., "Gladiator: 47/100 Due
 | Friends | Filtered to social connections | Varies | Client-side filter |
 | Country | Filtered by user.country_code | Varies | `lb:{mode}:{date}:country:{cc}` |
 
-### Implementation (Upstash Redis)
+### Implementation (Valkey)
 
 ```
 # Add score
@@ -193,12 +193,12 @@ ZREVRANGE lb:daily-frame:2025-02-22 (N-5) (N+5) WITHSCORES
 
 ### Weekly Aggregation
 
-A scheduled Cloudflare Worker (cron trigger) runs Sunday midnight UTC:
+A scheduled cron job on the VPS runs Sunday midnight UTC:
 
 1. Reads all daily leaderboards for the week
 2. Aggregates scores per user (sum of best daily FScores)
 3. Writes to `lb:{mode}:week:{iso_week}` sorted set
-4. Snapshots top 100 to `leaderboard_snapshots` table (Neon) for historical records
+4. Snapshots top 100 to `leaderboard_snapshots` table (PostgreSQL) for historical records
 
 ### Leaderboard UI
 
@@ -313,7 +313,7 @@ The share page:
 ### Account Upgrade Flow
 
 1. Anonymous user plays games → results stored locally (IndexedDB/SQLite) + server-side keyed by device fingerprint
-2. User registers via Clerk (Google, Discord, Apple, etc.)
+2. User registers via Logto (Google, Discord, Apple, etc.)
 3. Prompted: "Claim your anonymous history?"
 4. `POST /api/user/claim-anonymous { fingerprint }` merges all anonymous results to the new account
 5. One-way merge — anonymous identity is retired

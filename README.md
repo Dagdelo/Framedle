@@ -32,15 +32,20 @@ Think **Wordle meets YouTube** — daily challenges, leaderboards, streaks, and 
 └──────────────────────┬──────────────────────────────┘
                        │ HTTPS / WebSocket
 ┌──────────────────────┴──────────────────────────────┐
-│  EDGE: Hono on Cloudflare Workers (300+ PoPs)        │
-│  Auth: Clerk | Cache: Upstash Redis                  │
-│  Realtime: Durable Objects (Duels)                   │
+│  CLOUDFLARE FREE TIER                                │
+│  CDN + DNS + DDoS protection + SSL                   │
+│  R2: frame images, clips, audio ($0 egress, 10 GB)  │
+└──────────────────────┬──────────────────────────────┘
+                       │ Origin pull
+┌──────────────────────┴──────────────────────────────┐
+│  HOSTINGER KVM2 VPS — Coolify (PaaS + Traefik)      │
+│  Next.js (SSR) | Hono API (Node.js) | Logto (Auth)  │
+│  PostgreSQL 16 | Valkey | Umami | GlitchTip          │
+│  WebSocket (Duels via ws library in Hono process)   │
 └──────────────────────┬──────────────────────────────┘
                        │
-┌──────────────────────┴──────────────────────────────┐
-│  DATA: Neon PostgreSQL | Cloudflare R2 (images)      │
-│  PIPELINE: GitHub Actions + yt-dlp + ffmpeg          │
-└─────────────────────────────────────────────────────┘
+             GitHub Actions (free, public repo)
+             Content pipeline: yt-dlp + ffmpeg → R2
 ```
 
 ## Tech Stack
@@ -51,14 +56,23 @@ Think **Wordle meets YouTube** — daily challenges, leaderboards, streaks, and 
 | State | XState v5 (game), Zustand (UI) |
 | Desktop/Mobile | Tauri v2 (Win/Mac/Linux/iOS/Android) |
 | Web | Next.js 15 (App Router, SSR) |
-| API | Hono on Cloudflare Workers |
-| Auth | Clerk (Google, Discord, Apple, GitHub, X, email) |
-| Database | Neon PostgreSQL + Drizzle ORM |
+| API | Hono on Node.js (VPS) |
+| Auth | Logto (self-hosted) |
+| Database | PostgreSQL 16 (VPS) + Drizzle ORM |
 | Storage | Cloudflare R2 ($0 egress) |
-| Cache | Upstash Redis (leaderboards, sessions) |
-| Realtime | Cloudflare Durable Objects (Duels) |
+| Cache | Valkey (VPS, leaderboards, sessions) |
+| Realtime | ws library (VPS, embedded in Hono) |
 | Pipeline | GitHub Actions + yt-dlp + ffmpeg |
 | Monorepo | Turborepo + pnpm |
+
+## Deployment Strategies
+
+| Strategy | Description |
+|----------|-------------|
+| **VPS (Primary)** | Hostinger KVM2 + Coolify — all services on a single VPS at ~$8–18/mo fixed cost |
+| **Cloud (Migration Path)** | Cloudflare Workers + Neon + Clerk — documented migration path when VPS reaches capacity (~10K–20K DAU) |
+
+The primary deployment uses a self-hosted VPS stack (PostgreSQL 16, Valkey, Logto, Hono on Node.js) managed via [Coolify](https://coolify.io). Cloud-managed services (Neon, Upstash, Clerk, Cloudflare Workers) are documented as a migration path at scale. See [VPS Deployment](docs/architecture/vps-deployment.md) for the full setup guide and [Cost Analysis](docs/architecture/cost-analysis.md) for migration triggers.
 
 ## Documentation
 

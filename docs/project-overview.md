@@ -55,12 +55,15 @@ A multi-mode guessing game that:
 
 ## Architecture Summary
 
-**Edge-first serverless** — Cloudflare Workers API, Neon PostgreSQL, Cloudflare R2 storage, Upstash Redis for leaderboards, Clerk for authentication.
+**VPS-first self-hosted** — Hono on Node.js, PostgreSQL 16, Valkey, and Logto all running on a Hostinger KVM2 VPS managed via Coolify, with Cloudflare free tier for CDN/DNS and R2 for media storage.
 
 ```
-Clients (React + Tauri v2) → Cloudflare Edge (Hono API) → Neon + Redis + R2
-                                                         ↑
-                                     GitHub Actions Pipeline (yt-dlp + ffmpeg)
+Clients (React + Tauri v2) → Cloudflare CDN → VPS (Coolify + Traefik)
+                                                  → Hono API + Next.js (SSR)
+                                                  → PostgreSQL 16 + Valkey
+                                                  → Logto (Auth)
+                                               ↑
+                           GitHub Actions Pipeline (yt-dlp + ffmpeg → R2)
 ```
 
 ## Key Technical Decisions
@@ -68,13 +71,13 @@ Clients (React + Tauri v2) → Cloudflare Edge (Hono API) → Neon + Redis + R2
 | Decision | Choice | Why |
 |----------|--------|-----|
 | App framework | Tauri v2 | 6 platforms, 10x smaller than Electron |
-| Auth | Clerk | SSO + anonymous support, edge JWT, 10K MAU free |
-| Storage | Cloudflare R2 | $0 egress, native CF Workers binding |
-| Database | Neon PostgreSQL | Serverless, scale-to-zero, branching |
-| API | Hono on CF Workers | <1ms cold start, native R2/DO bindings |
+| Auth | Logto (self-hosted, migration: Clerk) | SSO + anonymous support, no per-user cost, $0 forever |
+| Storage | Cloudflare R2 | $0 egress, 10 GB free, CDN-integrated |
+| Database | PostgreSQL 16 (VPS, migration: Neon) | Full control, zero cost, shared by all services |
+| API | Hono on Node.js (VPS) | Lightweight, typed client, runs anywhere |
 | Game engine | Server-authoritative | Anti-cheat: answers never reach client |
-| Real-time | CF Durable Objects | Edge WebSocket, per-match isolation |
-| Leaderboards | Redis sorted sets | O(log N) rank operations |
+| Real-time | ws library + Valkey state on VPS | Embedded in Hono process, no per-connection cost |
+| Leaderboards | Valkey sorted sets | O(log N) rank operations, unlimited commands |
 | Pipeline | GitHub Actions + yt-dlp | 6h execution limit, free tier |
 
 ## Success Metrics
@@ -99,7 +102,7 @@ Clients (React + Tauri v2) → Cloudflare Edge (Hono API) → Neon + Redis + R2
 | 50,000 | **~$215** | + Clerk Pro, Sentry Team |
 | 100,000 | **~$1,100** | Clerk dominates (60% of cost) |
 
-The edge-first serverless architecture with R2's $0 egress keeps costs remarkably low. See **[full cost analysis](architecture/cost-analysis.md)** for per-game resource consumption, free tier ceilings, and migration triggers.
+The VPS-first architecture with R2's $0 egress keeps costs remarkably low. See **[full cost analysis](architecture/cost-analysis.md)** for per-game resource consumption, free tier ceilings, and migration triggers.
 
 ## Documentation Index
 
@@ -113,12 +116,12 @@ The edge-first serverless architecture with R2's $0 egress keeps costs remarkabl
 | Cost Analysis | [docs/architecture/cost-analysis.md](architecture/cost-analysis.md) | Free tier ceilings, migration triggers, cost at scale |
 | VPS Deployment | [docs/architecture/vps-deployment.md](architecture/vps-deployment.md) | Hostinger KVM2 self-hosted stack, Docker Compose, open-source alternatives |
 | ADRs (001-009) | [docs/adr/](adr/) | Architectural Decision Records |
-| Roadmap | [docs/project-management/roadmap.md](project-management/roadmap.md) | 26-week phased delivery plan |
+| Roadmap | [docs/project-management/roadmap.md](project-management/roadmap.md) | 28-week phased delivery plan |
 | Linear Issues | [docs/project-management/linear-issues.md](project-management/linear-issues.md) | 50 issues, 226 story points |
 
 ## Team & Timeline
 
 - **Team size**: 2-3 full-stack developers
 - **Total scope**: ~226 story points across 50 issues
-- **Timeline**: 26 weeks (6 months) to full launch
+- **Timeline**: 28 weeks (including 3 buffer weeks) to full launch
 - **MVP (web + Daily Frame)**: 8 weeks

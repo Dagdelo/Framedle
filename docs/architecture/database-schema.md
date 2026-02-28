@@ -1,4 +1,4 @@
-# Database Schema — Neon PostgreSQL
+# Database Schema — PostgreSQL 16
 
 ## ER Diagram (Simplified)
 
@@ -7,7 +7,7 @@
 │   users      │     │   videos      │     │   frames         │
 │──────────────│     │───────────────│     │──────────────────│
 │ id (PK)      │     │ id (PK)       │     │ id (PK)          │
-│ clerk_id     │     │ video_id (YT) │     │ video_id (FK)    │
+│ auth_prov_id │     │ video_id (YT) │     │ video_id (FK)    │
 │ display_name │     │ title         │     │ rank             │
 │ avatar_url   │     │ channel       │     │ timestamp_sec    │
 │ country      │     │ category      │     │ heatmap_value    │
@@ -51,7 +51,7 @@
 
 ```sql
 -- ============================================================
--- Framedle Database Schema — Neon PostgreSQL
+-- Framedle Database Schema — PostgreSQL 16
 -- ============================================================
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
@@ -62,7 +62,7 @@ CREATE EXTENSION IF NOT EXISTS "pg_trgm";    -- fuzzy text search
 -- ============================================================
 CREATE TABLE users (
     id              UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    clerk_id        TEXT UNIQUE,                    -- Clerk user ID (null for anonymous)
+    auth_provider_id TEXT UNIQUE,                    -- Logto user ID (null for anonymous)
     anon_fingerprint TEXT,                           -- Device fingerprint (anonymous users)
     display_name    TEXT NOT NULL DEFAULT 'Player',
     avatar_url      TEXT,
@@ -86,11 +86,11 @@ CREATE TABLE users (
 
     -- Constraints
     CONSTRAINT users_has_identity CHECK (
-        clerk_id IS NOT NULL OR anon_fingerprint IS NOT NULL
+        auth_provider_id IS NOT NULL OR anon_fingerprint IS NOT NULL
     )
 );
 
-CREATE INDEX idx_users_clerk ON users(clerk_id) WHERE clerk_id IS NOT NULL;
+CREATE INDEX idx_users_auth_provider ON users(auth_provider_id) WHERE auth_provider_id IS NOT NULL;
 CREATE INDEX idx_users_anon ON users(anon_fingerprint) WHERE anon_fingerprint IS NOT NULL;
 
 -- ============================================================
@@ -311,4 +311,132 @@ INSERT INTO achievements (id, name, description, icon, xp_reward, category) VALU
     ('scholar',        'Scholar',          'Get 5 perfect Year Guesser games',          '📚', 0,    'mode_specific'),
     ('social_butterfly','Social Butterfly','Share results 50 times',                    '🤝', 0,    'social')
 ON CONFLICT (id) DO NOTHING;
+```
+
+---
+
+## Mermaid ER Diagram
+
+```mermaid
+erDiagram
+    users {
+        uuid id PK
+        text auth_provider_id
+        text anon_fingerprint
+        text display_name
+        text avatar_url
+        char country_code
+        bigint xp
+        integer level
+        integer streak_current
+        integer streak_best
+        date last_play_date
+        timestamptz created_at
+    }
+
+    videos {
+        uuid id PK
+        varchar video_id UK
+        text title
+        text channel
+        text category
+        integer duration
+        bigint view_count
+        date upload_date
+        smallint difficulty
+        jsonb heatmap_raw
+    }
+
+    frames {
+        uuid id PK
+        varchar video_id FK
+        smallint rank
+        float timestamp_sec
+        float heatmap_value
+        text r2_path
+        jsonb r2_variants
+        integer width
+        integer height
+    }
+
+    daily_games {
+        uuid id PK
+        date game_date
+        game_mode mode
+        integer game_number
+        varchar video_id FK
+        jsonb config
+        bigint seed
+    }
+
+    game_results {
+        uuid id PK
+        uuid user_id FK
+        uuid daily_game_id FK
+        integer score
+        integer max_score
+        smallint guesses_used
+        jsonb guesses_data
+        integer time_ms
+        boolean completed
+        boolean won
+        text share_hash UK
+        text emoji_grid
+        timestamptz completed_at
+    }
+
+    achievements {
+        text id PK
+        text name
+        text description
+        text icon
+        integer xp_reward
+        text category
+    }
+
+    user_achievements {
+        uuid user_id PK
+        text achievement_id PK
+        timestamptz unlocked_at
+    }
+
+    duel_matches {
+        uuid id PK
+        uuid player1_id FK
+        uuid player2_id FK
+        uuid winner_id FK
+        jsonb rounds
+        smallint score_p1
+        smallint score_p2
+        smallint best_of
+        text status
+        timestamptz started_at
+        timestamptz completed_at
+    }
+
+    leaderboard_snapshots {
+        uuid id PK
+        text period
+        game_mode mode
+        jsonb rankings
+        timestamptz created_at
+    }
+
+    video_search {
+        varchar video_id
+        text title
+        text channel
+        text category
+        bigint view_count
+        date upload_date
+    }
+
+    users ||--o{ game_results : "plays"
+    users ||--o{ user_achievements : "earns"
+    users ||--o{ duel_matches : "player1"
+    users ||--o{ duel_matches : "player2"
+    achievements ||--o{ user_achievements : "granted via"
+    videos ||--o{ frames : "has"
+    videos ||--o{ daily_games : "featured in"
+    daily_games ||--o{ game_results : "produces"
 ```
