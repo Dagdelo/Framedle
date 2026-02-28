@@ -1,0 +1,65 @@
+# docker-compose.coolify.yml — Coolify production deployment
+#
+# Infrastructure services (PostgreSQL, Valkey, Logto) are deployed as
+# separate Coolify resources (not defined here). This file covers only
+# the application containers.
+#
+# Traefik is provided by Coolify and routes based on labels below.
+# Environment variables are injected by Coolify via the ${VAR} syntax.
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+      NEXT_PUBLIC_LOGTO_ENDPOINT: ${NEXT_PUBLIC_LOGTO_ENDPOINT}
+      NEXT_PUBLIC_LOGTO_APP_ID: ${NEXT_PUBLIC_LOGTO_APP_ID}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.framedle-web.rule=Host(`${APP_DOMAIN}`)"
+      - "traefik.http.routers.framedle-web.entrypoints=https"
+      - "traefik.http.routers.framedle-web.tls=true"
+      - "traefik.http.routers.framedle-web.tls.certresolver=letsencrypt"
+      - "traefik.http.services.framedle-web.loadbalancer.server.port=3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "4000"
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      LOGTO_ENDPOINT: ${LOGTO_ENDPOINT}
+      LOGTO_APP_ID: ${LOGTO_APP_ID}
+      LOGTO_APP_SECRET: ${LOGTO_APP_SECRET}
+      R2_ENDPOINT: ${R2_ENDPOINT}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY}
+      R2_BUCKET: ${R2_BUCKET}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.framedle-api.rule=Host(`${API_DOMAIN}`)"
+      - "traefik.http.routers.framedle-api.entrypoints=https"
+      - "traefik.http.routers.framedle-api.tls=true"
+      - "traefik.http.routers.framedle-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.framedle-api.loadbalancer.server.port=4000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:4000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
