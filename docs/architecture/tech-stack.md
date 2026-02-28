@@ -162,28 +162,31 @@ Framedle uses an **edge-first serverless architecture** optimized for low latenc
 
 ## Cost Model
 
-### Free Tier Coverage (0-10K DAU)
+> Full analysis with per-game resource consumption, free tier ceilings, and migration triggers: **[Cost Analysis](cost-analysis.md)**
 
-| Service | Free Tier | Expected Usage |
-|---------|-----------|---------------|
-| Cloudflare Workers | 100K req/day | ~50K req/day |
-| Cloudflare R2 | 10M class B req/mo | ~5M req/mo |
-| Neon | 0.5 GB storage, autoscaling | <0.5 GB |
-| Upstash Redis | 10K commands/day | ~5K commands/day |
-| Clerk | 10K MAU | <10K MAU |
-| GitHub Actions | 2,000 min/mo | ~300 min/mo |
-| Vercel | 100 GB bandwidth | <100 GB |
-| PostHog | 1M events/mo | <1M events/mo |
-| Sentry | 5K errors/mo | <5K errors/mo |
+### Free Tier Coverage (0–500 DAU)
 
-### Scaled Costs
+| Service | Free Tier | Max DAU on Free |
+|---------|-----------|----------------|
+| Cloudflare Workers | 100K req/day | ~2,500 |
+| Cloudflare R2 | 10 GB storage, 10M class B/mo | ~83,000 |
+| Neon | 100 CU-hours/mo, 0.5 GB | ~1,000 |
+| Upstash Redis | 500K commands/mo | ~1,100 |
+| Clerk | 50K MRU | ~60,000 |
+| GitHub Actions | 2,000 min/mo (free for public repos) | N/A |
+| Cloudflare Pages | Unlimited (no commercial restriction) | N/A |
+| PostHog | 1M events/mo | ~83,000 |
+| Sentry | 5K errors/mo | ~30,000 |
 
-| DAU | Workers | R2 | Neon | Redis | Clerk | Total |
-|-----|---------|-----|------|-------|-------|-------|
-| 1K | $0 | $0 | $0 | $0 | $0 | ~$0 |
-| 10K | $5 | $3 | $5 | $10 | $0 | ~$23 |
-| 50K | $25 | $8 | $19 | $30 | $25 | ~$107 |
-| 100K | $50 | $15 | $39 | $50 | $50 | ~$204 |
-| 1M | $200 | $50 | $100 | $100 | $100 | ~$550 |
+### Scaled Costs (Monthly)
 
-The key cost advantage: **R2's $0 egress** means serving millions of images costs only storage + request fees, not bandwidth.
+| DAU | Workers | R2 | Neon | Redis | Clerk | Other | Total |
+|-----|---------|-----|------|-------|-------|-------|-------|
+| 500 | $0 | $0 | $0 | $0 | $0 | $1 | **~$1** |
+| 1K | $5 | $0 | $0 | $1 | $0 | $1 | **~$7** |
+| 5K | $5 | $0 | $21 | $5 | $0 | $1 | **~$32** |
+| 20K | $9 | $0 | $53 | $10 | $0 | $1 | **~$82** |
+| 50K | $20 | $2 | $128 | $10 | $25 | $27 | **~$215** |
+| 100K | $35 | $3 | $310 | $30 | $675 | $42 | **~$1,100** |
+
+The key cost advantage: **R2's $0 egress** means serving millions of images costs only storage + request fees, not bandwidth. At 100K DAU, Clerk (auth) becomes the dominant cost — plan for self-hosted auth migration at scale.
