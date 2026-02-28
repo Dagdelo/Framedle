@@ -51,7 +51,7 @@ Create R2 bucket `framedle-content`. Configure CORS policy for web + Tauri origi
 
 ### FRA-4 🔴 Cloudflare Workers API Project
 
-Initialize Hono project in `workers/api/`. Set up `wrangler.toml` with R2 binding, KV namespace, Durable Object bindings, and environment variables. Deploy health check endpoint. Configure custom domain `api.framedle.gg`.
+Initialize Hono project in `workers/api/`. Set up `wrangler.toml` with R2 binding, KV namespace, Durable Object bindings, and environment variables. Deploy health check endpoint. Configure custom domain `api.framedle.wtf`.
 
 **Acceptance Criteria**:
 - `wrangler dev` starts local development server
