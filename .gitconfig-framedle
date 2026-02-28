@@ -1,0 +1,6 @@
+[user]
+    name = Dagdelo
+    email = henrique@hd5.dev
+
+[core]
+    sshCommand = ssh -i ~/.ssh/henrique@hd5.dev_id_ed25519 -o IdentitiesOnly=yes
