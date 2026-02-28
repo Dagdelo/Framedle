@@ -333,7 +333,7 @@ Duels are very cost-efficient on Durable Objects.
 | Service | Tier | Cost |
 |---------|------|------|
 | All services | Free tiers | $0 |
-| Domain (framedle.gg) | Registration | ~$12/year ($1/mo) |
+| Domain (framedle.wtf) | Registration | ~$12/year ($1/mo) |
 | **Monthly total** | | **~$1** |
 
 No users, just development and content pipeline seeding.
