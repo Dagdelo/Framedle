@@ -77,6 +77,8 @@ Think **Wordle meets YouTube** — daily challenges, leaderboards, streaks, and 
 | [System Architecture](docs/architecture/system-architecture.md) | Full system design, API endpoints, data flow |
 | [Tech Stack](docs/architecture/tech-stack.md) | Technology choices with justification and costs |
 | [Database Schema](docs/architecture/database-schema.md) | Complete PostgreSQL schema (10 tables) |
+| [Cost Analysis](docs/architecture/cost-analysis.md) | Free tier ceilings, migration triggers, cost at scale |
+| [VPS Deployment](docs/architecture/vps-deployment.md) | Hostinger KVM2 self-hosted stack, open-source alternatives |
 
 ### Architectural Decision Records
 
@@ -111,7 +113,9 @@ framedle/
 │   ├── architecture/
 │   │   ├── system-architecture.md
 │   │   ├── tech-stack.md
-│   │   └── database-schema.md
+│   │   ├── database-schema.md
+│   │   ├── cost-analysis.md
+│   │   └── vps-deployment.md
 │   ├── adr/
 │   │   ├── 001-tauri-over-electron.md
 │   │   ├── 002-auth-provider.md
