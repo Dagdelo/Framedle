@@ -1,0 +1,27 @@
+{
+  "name": "@framedle/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev --turbopack",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo 'lint not configured yet'",
+    "test": "echo 'test not configured yet'",
+    "clean": "rm -rf dist .next"
+  },
+  "dependencies": {
+    "@framedle/ui": "workspace:*",
+    "@framedle/api-client": "workspace:*",
+    "next": "^15.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.7.0"
+  }
+}

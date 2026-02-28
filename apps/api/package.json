@@ -1,0 +1,25 @@
+{
+  "name": "@framedle/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo 'lint not configured yet'",
+    "test": "echo 'test not configured yet'",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@framedle/game-engine": "workspace:*",
+    "@framedle/shared": "workspace:*",
+    "@hono/node-server": "^1.13.0",
+    "hono": "^4.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}
