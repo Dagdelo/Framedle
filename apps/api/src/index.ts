@@ -5,6 +5,7 @@ import { cors } from 'hono/cors'
 import { serve } from '@hono/node-server'
 import { gameRoutes } from './routes/game'
 import { adminRoutes } from './routes/admin'
+import { adminUserRoutes } from './routes/admin-users'
 import { videoRoutes } from './routes/videos'
 import { userRoutes } from './routes/user'
 import { webhookRoutes } from './routes/webhooks'
@@ -35,6 +36,7 @@ app.get('/health', (c) => c.json({ status: 'ok' }))
 // Route groups
 app.route('/game', gameRoutes)
 app.route('/admin', adminRoutes)
+app.route('/admin/users', adminUserRoutes)
 app.route('/videos', videoRoutes)
 app.route('/user', userRoutes)
 app.route('/webhooks', webhookRoutes)

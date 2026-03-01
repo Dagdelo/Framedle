@@ -49,12 +49,12 @@ export async function getTodaysDailyGame() {
 }
 
 /**
- * Submit a guess for a daily game.
+ * Core guess submission logic that takes a resolved userId directly.
  */
-export async function submitGameGuess(
+export async function submitGameGuessForUser(
+  userId: string,
   dailyGameId: string,
   guessText: string,
-  fingerprint: string,
 ) {
   // Get the daily game
   const game = await db
@@ -76,29 +76,13 @@ export async function submitGameGuess(
 
   if (!video) return { error: 'Video not found' }
 
-  // Get or create user by fingerprint
-  let user = await db
-    .select()
-    .from(schema.users)
-    .where(eq(schema.users.anonFingerprint, fingerprint))
-    .limit(1)
-    .then((rows) => rows[0])
-
-  if (!user) {
-    const inserted = await db
-      .insert(schema.users)
-      .values({ anonFingerprint: fingerprint })
-      .returning()
-    user = inserted[0]
-  }
-
   // Check existing result for this game
   let existingResult = await db
     .select()
     .from(schema.gameResults)
     .where(
       and(
-        eq(schema.gameResults.userId, user.id),
+        eq(schema.gameResults.userId, userId),
         eq(schema.gameResults.dailyGameId, dailyGameId),
       ),
     )
@@ -166,7 +150,7 @@ export async function submitGameGuess(
       .where(eq(schema.gameResults.id, existingResult.id))
   } else {
     await db.insert(schema.gameResults).values({
-      userId: user.id,
+      userId,
       dailyGameId,
       guessesData: allGuesses,
       guessesUsed,
@@ -192,7 +176,56 @@ export async function submitGameGuess(
 }
 
 /**
- * Get a player's result for a specific game.
+ * Submit a guess for a daily game using fingerprint (anonymous play).
+ * Resolves user by fingerprint, then delegates to submitGameGuessForUser.
+ */
+export async function submitGameGuess(
+  dailyGameId: string,
+  guessText: string,
+  fingerprint: string,
+) {
+  // Get or create user by fingerprint
+  let user = await db
+    .select()
+    .from(schema.users)
+    .where(eq(schema.users.anonFingerprint, fingerprint))
+    .limit(1)
+    .then((rows) => rows[0])
+
+  if (!user) {
+    const inserted = await db
+      .insert(schema.users)
+      .values({ anonFingerprint: fingerprint })
+      .returning()
+    user = inserted[0]
+  }
+
+  return submitGameGuessForUser(user.id, dailyGameId, guessText)
+}
+
+/**
+ * Get a player's result for a specific game by userId.
+ */
+export async function getGameResultForUser(dailyGameId: string, userId: string) {
+  const result = await db
+    .select()
+    .from(schema.gameResults)
+    .where(
+      and(
+        eq(schema.gameResults.userId, userId),
+        eq(schema.gameResults.dailyGameId, dailyGameId),
+      ),
+    )
+    .limit(1)
+    .then((rows) => rows[0])
+
+  if (!result) return null
+
+  return formatGameResult(result, dailyGameId)
+}
+
+/**
+ * Get a player's result for a specific game by fingerprint (anonymous).
  */
 export async function getGameResult(dailyGameId: string, fingerprint: string) {
   const user = await db
@@ -218,6 +251,13 @@ export async function getGameResult(dailyGameId: string, fingerprint: string) {
 
   if (!result) return null
 
+  return formatGameResult(result, dailyGameId)
+}
+
+async function formatGameResult(
+  result: typeof schema.gameResults.$inferSelect,
+  dailyGameId: string,
+) {
   // Get video title if game is completed
   let answer: string | undefined
   if (result.completed) {
