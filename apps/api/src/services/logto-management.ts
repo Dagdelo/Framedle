@@ -8,7 +8,7 @@ async function getM2MToken(): Promise<string> {
   const endpoint = process.env.LOGTO_ENDPOINT
   const appId = process.env.LOGTO_M2M_APP_ID
   const appSecret = process.env.LOGTO_M2M_APP_SECRET
-  const resource = process.env.LOGTO_MANAGEMENT_API_RESOURCE || `${endpoint}/api`
+  const resource = process.env.LOGTO_MANAGEMENT_API_RESOURCE || 'https://default.logto.app/api'
 
   if (!endpoint || !appId || !appSecret) {
     throw new Error('LOGTO_ENDPOINT, LOGTO_M2M_APP_ID, LOGTO_M2M_APP_SECRET are required')
