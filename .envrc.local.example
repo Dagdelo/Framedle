@@ -47,6 +47,8 @@ export LOGTO_WEBHOOK_SECRET="YOUR_WEBHOOK_SECRET"
 # M2M app for Logto Management API (user invites, role management)
 export LOGTO_M2M_APP_ID="YOUR_M2M_APP_ID"
 export LOGTO_M2M_APP_SECRET="YOUR_M2M_APP_SECRET"
+# Logto Management API resource — hardcoded in Logto OSS, do not change
+export LOGTO_MANAGEMENT_API_RESOURCE="https://default.logto.app/api"
 
 # Legacy vars (kept for backward compat)
 export LOGTO_APP_ID="YOUR_LOGTO_APP_ID"
