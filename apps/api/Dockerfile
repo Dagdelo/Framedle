@@ -11,7 +11,9 @@ COPY apps/api/package.json ./apps/api/
 COPY packages/game-engine/package.json ./packages/game-engine/
 COPY packages/shared/package.json ./packages/shared/
 
-RUN pnpm install --frozen-lockfile
+# Coolify injects NODE_ENV=production as a build ARG which causes pnpm to
+# skip devDependencies. Override to ensure build tools (tsup, tsc) install.
+RUN NODE_ENV=development pnpm install --frozen-lockfile
 
 COPY . .
 
