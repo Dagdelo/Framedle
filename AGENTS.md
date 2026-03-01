@@ -20,7 +20,7 @@ Framedle uses a **VPS-first hybrid architecture**: all backend services run on a
 
 ```
 CLIENT APPS
-  Next.js 15 (SSR/SEO)  |  Tauri v2 Desktop  |  Tauri v2 Mobile
+  Nuxt 3 (SSR/SEO)  |  Tauri v2 Desktop  |  Tauri v2 Mobile
          └──────────────────────┬──────────────────────┘
                           HTTPS / WebSocket
                                 │
@@ -29,7 +29,7 @@ CLIENT APPS
                                 │ origin pull
         HOSTINGER KVM2 VPS — managed by Coolify (Traefik)
           ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐
-          │ Next.js  │  │  Hono    │  │  Logto   │  │  Umami   │
+          │  Nuxt 3  │  │  Hono    │  │  Logto   │  │  Umami   │
           │ :3000    │  │  API     │  │  Auth    │  │ Analytics│
           │          │  │  :4000   │  │  :3301   │  │  :3100   │
           └──────────┘  └──────────┘  └──────────┘  └──────────┘
@@ -49,8 +49,8 @@ CLIENT APPS
 
 | Layer | Technology | Notes |
 |-------|-----------|-------|
-| Frontend framework | React 19 + TypeScript | Shared across all clients |
-| Web app | Next.js 15 (App Router) | SSR, ISR, share page OG rendering |
+| Frontend framework | Vue 3 + TypeScript | Shared across all clients |
+| Web app | Nuxt 3 (SSR, file-based routing) | SSR, ISR, share page OG rendering |
 | Desktop/Mobile | Tauri v2 | Rust backend, React frontend from packages/ |
 | API | Hono (Node.js) | REST + WebSocket (duels via ws library) |
 | Database | PostgreSQL 16 | Drizzle ORM, pg_trgm for fuzzy search |
@@ -61,9 +61,9 @@ CLIENT APPS
 | Deployment | Coolify on KVM2 VPS | Push-to-deploy, auto HTTPS, scheduled DB backups |
 | Error tracking | GlitchTip | Sentry SDK-compatible, 400 MB vs Sentry's 16+ GB |
 | Analytics | Umami | Privacy-first, <2 KB script, shares PostgreSQL |
-| State machines | XState v5 | One machine per game mode in packages/game-engine |
+| Game logic | Pure functions | Daily Frame mode in packages/game-engine (XState v5 planned for complex modes) |
 | Testing | Vitest + Playwright | Unit, integration, E2E |
-| Styling | Tailwind CSS + Framer Motion | Design system in packages/ui |
+| Styling | Tailwind CSS + motion.dev | Design system in packages/ui |
 
 ---
 
@@ -72,33 +72,34 @@ CLIENT APPS
 ```
 framedle/
 ├── apps/
-│   ├── web/                    # Next.js 15 — SSR web frontend
-│   │   ├── app/                # App Router pages and layouts
-│   │   ├── components/         # Web-specific React components
-│   │   ├── Dockerfile          # Multi-stage build, standalone output
-│   │   └── next.config.ts
+│   ├── web/                    # Nuxt 3 — SSR web frontend
+│   │   ├── pages/              # File-based routing
+│   │   ├── composables/        # Vue composables (useGameState, useTheme, etc.)
+│   │   ├── variants/           # 5 design variants (v1-v5)
+│   │   ├── Dockerfile          # Multi-stage build, Nitro standalone output
+│   │   └── nuxt.config.ts
 │   ├── api/                    # Hono API — REST + WebSocket backend
 │   │   ├── src/
 │   │   │   └── index.ts        # Entry point
 │   │   └── Dockerfile
 │   ├── desktop/                # Tauri v2 desktop (planned)
 │   │   ├── src-tauri/          # Rust backend
-│   │   └── src/                # React frontend (imports from packages/)
+│   │   └── src/                # Vue frontend (imports from packages/)
 │   └── mobile/                 # Tauri v2 mobile (planned)
 │       ├── src-tauri/
 │       └── src/
 ├── packages/
-│   ├── ui/                     # Shared React design system
-│   │   ├── components/         # Button, Card, Modal, GameBoard, etc.
-│   │   ├── hooks/              # useGame, useTimer, useShare, etc.
-│   │   └── styles/             # Tailwind presets, animations
-│   ├── game-engine/            # Pure TypeScript game logic (XState v5)
-│   │   ├── modes/              # One state machine file per game mode
+│   ├── ui/                     # Shared Vue 3 design system
+│   │   ├── components/ui/      # shadcn-vue primitives (Button, Card, Input, etc.)
+│   │   ├── components/game/    # Game board components (FrameViewer, GuessInput, etc.)
+│   │   └── lib/                # Utilities (cn helper)
+│   ├── game-engine/            # Pure TypeScript game logic
+│   │   ├── modes/              # One module per game mode (daily-frame.ts)
 │   │   ├── scoring.ts          # Score calculations
-│   │   ├── types.ts            # Shared types and Zod schemas
-│   │   └── daily-seed.ts       # Deterministic daily seed logic
-│   ├── api-client/             # Typed HTTP client (generated from OpenAPI)
-│   └── shared/                 # Constants, utils, validators
+│   │   ├── matching.ts         # Fuzzy title matching (Levenshtein)
+│   │   └── types.ts            # Game config types
+│   ├── api-client/             # Typed HTTP client (createFramedleClient factory)
+│   └── shared/                 # Types, constants, validators
 ├── pipeline/
 │   ├── extract_frames.py       # Single-video frame extraction
 │   ├── extract_batch.py        # Batch processor (run by GitHub Actions)
@@ -170,9 +171,36 @@ python extract_frames.py --video-id <VIDEO_ID>
 - **XState v5** for game state machines — one machine per mode in `packages/game-engine/modes/`
 - **Hono** for all API routes — typed RPC, middleware-first design
 - **API response shape**: always `{ data, error, meta }` — never naked payloads
-- **Conventional commits**: `feat:`, `fix:`, `docs:`, `chore:`, `refactor:`, `test:`
+- **Conventional commits**: `feat:`, `fix:`, `docs:`, `chore:`, `refactor:`, `test:`, `perf:`, `ci:`
+- **Commit scopes**: `(api)`, `(web)`, `(shared)`, `(game-engine)`, `(api-client)`, `(ui)`, `(pipeline)`, `(deps)`
 - **Single source of truth**: docs are authoritative — do not duplicate architecture decisions in code comments
 - **Git user**: Dagdelo `<henrique@hd5.dev>`
+
+---
+
+## Git Workflow
+
+**Branch flow**: All work happens on `development`. PRs merge into `main` (production).
+
+```
+development ──commit──commit──push──► PR ──review──► main (production)
+```
+
+### Rules for Agents
+
+1. **Always commit after a successful iteration**. Do not leave work uncommitted.
+2. **Use conventional commits** with the format `type(scope): subject`. Use `/commit` skill.
+3. **Never push directly to `main`**. Always push to `development` and open a PR.
+4. **Use `/pr` skill** to create PRs from `development` to `main`.
+5. **Run `pnpm test` before pushing**. All tests must pass.
+6. **One logical change per commit**. Split unrelated changes into separate commits.
+7. **Never commit secrets** (.env, credentials, API keys).
+8. **Stage files by name** — never use `git add -A` or `git add .`.
+
+### Versioning
+
+Semantic Versioning (`MAJOR.MINOR.PATCH`) tracked in root `package.json`.
+Bump version when preparing a release PR to main.
 
 ---
 
@@ -186,7 +214,7 @@ python extract_frames.py --video-id <VIDEO_ID>
 - **Local dev**: `docker compose up -d` starts PostgreSQL 16 + Valkey
 
 Production domains:
-- `framedle.wtf` → Next.js app
+- `framedle.wtf` → Nuxt 3 app
 - `api.framedle.wtf` → Hono API
 - `auth.framedle.wtf` → Logto
 - `analytics.framedle.wtf` → Umami
