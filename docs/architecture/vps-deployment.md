@@ -114,7 +114,7 @@ Both strategies use **Cloudflare free tier as a CDN/proxy** in front of the VPS.
 │  │ Next.js  │  │  Hono    │  │  Logto   │  │  Umami   │          │
 │  │  App     │  │  API     │  │  Auth    │  │ Analytics│          │
 │  │  (SSR)   │  │  Server  │  │  Server  │  │          │          │
-│  │  :3000   │  │  :4000   │  │  :3301   │  │  :3100   │          │
+│  │  :3000   │  │  :4000   │  │  :3001   │  │  :3100   │          │
 │  └──────────┘  └──────────┘  └──────────┘  └──────────┘          │
 │       │                                                             │
 │  ┌─────────────────────────────────────────────────────┐          │
@@ -285,7 +285,7 @@ Setup: Logto needs its own PostgreSQL database (schema). Share the PostgreSQL in
 # Logto environment
 LOGTO_DB_URL=postgresql://logto:pass@localhost:5432/logto
 LOGTO_ENDPOINT=https://auth.framedle.wtf
-LOGTO_ADMIN_ENDPOINT=https://auth-admin.framedle.wtf
+LOGTO_ADMIN_ENDPOINT=https://logto-admin.hd5.dev
 ```
 
 **Migration from Clerk**: If you ever used Clerk and want to migrate, Logto supports user import via API. The JWT format differs, so client SDKs need updating.
@@ -773,7 +773,7 @@ flowchart TB
 
             NextJS[Next.js :3000<br/>400 MB · SSR + Game UI]
             Hono[Hono API :4000<br/>200 MB · Game Logic + WS Duels]
-            Logto[Logto :3301<br/>250 MB · SSO + JWT]
+            Logto[Logto :3001<br/>250 MB · SSO + JWT]
             Umami[Umami :3100<br/>250 MB · Analytics]
             GlitchTip[GlitchTip :8000<br/>400 MB · Error Tracking]
 

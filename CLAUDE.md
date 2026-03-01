@@ -15,6 +15,9 @@ VPS-first hybrid stack: all backend services on a single Hostinger KVM2 VPS mana
 - **Database**: PostgreSQL 16 (Drizzle ORM)
 - **Cache**: Valkey 8 (Redis-compatible, sorted sets for leaderboards)
 - **Auth**: Logto (self-hosted, anonymous → registered upgrade)
+  - Web: `openid-client` OIDC flow, H3 encrypted cookie sessions (`useAuth()` composable)
+  - API: `jose` JWT verification via JWKS (stateless, no DB call)
+  - Admin: JWT `admin` role claim via `requireAdmin` middleware
 - **Storage**: Cloudflare R2 (10 GB free, $0 egress)
 - **Monorepo**: Turborepo + pnpm
 - **Deployment**: Coolify (self-hosted PaaS — push-to-deploy, auto HTTPS, scheduled DB backups)
@@ -98,6 +101,22 @@ Bump version in root `package.json` when preparing a release PR to main.
 - **CI/CD**: GitHub Actions (public repo, free)
 - **Pipeline**: GitHub Actions cron (yt-dlp + ffmpeg → R2)
 - **Local dev**: `docker compose up -d` starts PostgreSQL 16 + Valkey (see `docker-compose.yml`)
+
+### Auth Environment Variables
+
+| Variable | Used by | Purpose |
+|----------|---------|---------|
+| `LOGTO_ENDPOINT` | API, Nuxt | Base Logto instance URL |
+| `LOGTO_API_RESOURCE` | API | JWT audience for JWKS verification |
+| `LOGTO_WEBHOOK_SECRET` | API | Verify Logto webhook signatures |
+| `LOGTO_M2M_APP_ID` | API | Management API client (user invites, roles) |
+| `LOGTO_M2M_APP_SECRET` | API | Management API secret |
+| `NUXT_LOGTO_APP_ID` | Nuxt | OIDC client ID for web app |
+| `NUXT_LOGTO_APP_SECRET` | Nuxt | OIDC client secret for web app |
+| `NUXT_LOGTO_API_RESOURCE` | Nuxt | API resource for access token audience |
+| `NUXT_LOGTO_COOKIE_SECRET` | Nuxt | AES-256 session cookie encryption key |
+
+See `docs/auth-setup-guide.md` for OAuth provider configuration (Google, GitHub, Twitter, Instagram, Facebook).
 
 ## Environment
 

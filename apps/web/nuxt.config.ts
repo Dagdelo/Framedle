@@ -30,6 +30,11 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
+    logtoEndpoint: process.env.NUXT_LOGTO_ENDPOINT || '',
+    logtoAppId: process.env.NUXT_LOGTO_APP_ID || '',
+    logtoAppSecret: process.env.NUXT_LOGTO_APP_SECRET || '',
+    logtoApiResource: process.env.NUXT_LOGTO_API_RESOURCE || '',
+    logtoCookieSecret: process.env.NUXT_LOGTO_COOKIE_SECRET || '',
     public: {
       apiUrl: process.env.NUXT_PUBLIC_API_URL || 'http://localhost:4000',
     },

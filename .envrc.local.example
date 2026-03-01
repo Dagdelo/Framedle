@@ -25,16 +25,34 @@ export R2_SECRET_KEY="YOUR_R2_SECRET_KEY"
 export R2_BUCKET="framedle-content"
 
 # ============================================================
-# Auth (Logto self-hosted or Clerk free tier)
+# Auth (Logto self-hosted)
 # ============================================================
-# Logto (self-hosted on VPS):
+# Shared
 export LOGTO_ENDPOINT="https://auth.framedle.wtf"
+
+# Nuxt web app OIDC client
+export NUXT_LOGTO_ENDPOINT="https://auth.framedle.wtf"
+export NUXT_LOGTO_APP_ID="YOUR_LOGTO_APP_ID"
+export NUXT_LOGTO_APP_SECRET="YOUR_LOGTO_APP_SECRET"
+export NUXT_LOGTO_API_RESOURCE="https://api.framedle.wtf"
+# Generate: openssl rand -base64 32
+export NUXT_LOGTO_COOKIE_SECRET="YOUR_32_CHAR_RANDOM_SECRET"
+
+# Hono API JWT verification
+export LOGTO_API_RESOURCE="https://api.framedle.wtf"
+
+# Webhook signature (set in Logto Console → Webhooks)
+export LOGTO_WEBHOOK_SECRET="YOUR_WEBHOOK_SECRET"
+
+# M2M app for Logto Management API (user invites, role management)
+export LOGTO_M2M_APP_ID="YOUR_M2M_APP_ID"
+export LOGTO_M2M_APP_SECRET="YOUR_M2M_APP_SECRET"
+# Logto Management API resource — hardcoded in Logto OSS, do not change
+export LOGTO_MANAGEMENT_API_RESOURCE="https://default.logto.app/api"
+
+# Legacy vars (kept for backward compat)
 export LOGTO_APP_ID="YOUR_LOGTO_APP_ID"
 export LOGTO_APP_SECRET="YOUR_LOGTO_APP_SECRET"
-
-# Clerk (managed — if using instead of Logto):
-# export NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_test_XXXX"
-# export CLERK_SECRET_KEY="sk_test_XXXX"
 
 # ============================================================
 # Linear (project management — CLI, MCP, and API)

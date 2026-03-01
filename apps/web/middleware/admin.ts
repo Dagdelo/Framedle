@@ -1,10 +1,11 @@
 export default defineNuxtRouteMiddleware((to) => {
-  if (to.path === '/admin/login') return
+  const { isAuthenticated, isAdmin } = useAuth()
 
-  if (import.meta.client) {
-    const token = localStorage.getItem('admin_token')
-    if (!token) {
-      return navigateTo('/admin/login')
-    }
+  if (!isAuthenticated.value) {
+    return navigateTo(`/api/auth/sign-in?returnTo=${encodeURIComponent(to.fullPath)}`, { external: true })
+  }
+
+  if (!isAdmin.value) {
+    return navigateTo('/')
   }
 })

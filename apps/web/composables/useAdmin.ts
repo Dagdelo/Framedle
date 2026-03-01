@@ -1,72 +1,90 @@
 import type { FramedleClient } from '@framedle/api-client'
 
-const ADMIN_TOKEN_KEY = 'admin_token'
-
 export function useAdmin() {
-  const token = ref<string | null>(null)
-  const isAuthenticated = computed(() => !!token.value)
-
-  if (import.meta.client) {
-    token.value = localStorage.getItem(ADMIN_TOKEN_KEY)
-  }
-
-  function login(secret: string) {
-    token.value = secret
-    if (import.meta.client) {
-      localStorage.setItem(ADMIN_TOKEN_KEY, secret)
-    }
-  }
-
-  function logout() {
-    token.value = null
-    if (import.meta.client) {
-      localStorage.removeItem(ADMIN_TOKEN_KEY)
-    }
-  }
+  const { isAuthenticated, isAdmin, getAccessToken } = useAuth()
 
   function getApi() {
     return useNuxtApp().$api as FramedleClient
   }
 
   async function getConfig() {
-    return getApi().admin.getConfig(token.value ?? undefined)
+    const token = await getAccessToken()
+    return getApi().admin.getConfig(token ?? undefined)
   }
 
   async function updateTheme(variantId: number) {
-    if (!token.value) throw new Error('Not authenticated')
-    return getApi().admin.updateTheme(variantId, token.value)
+    const token = await getAccessToken()
+    if (!token) throw new Error('Not authenticated')
+    return getApi().admin.updateTheme(variantId, token)
   }
 
   async function getGames(page = 1) {
-    if (!token.value) throw new Error('Not authenticated')
-    return getApi().admin.getGames(token.value, page)
+    const token = await getAccessToken()
+    if (!token) throw new Error('Not authenticated')
+    return getApi().admin.getGames(token, page)
   }
 
   async function createGame(date: string, mode: string, videoId: string) {
-    if (!token.value) throw new Error('Not authenticated')
-    return getApi().admin.createGame({ date, mode, videoId }, token.value)
+    const token = await getAccessToken()
+    if (!token) throw new Error('Not authenticated')
+    return getApi().admin.createGame({ date, mode, videoId }, token)
   }
 
   async function getStats() {
-    if (!token.value) throw new Error('Not authenticated')
-    return getApi().admin.getStats(token.value)
+    const token = await getAccessToken()
+    if (!token) throw new Error('Not authenticated')
+    return getApi().admin.getStats(token)
   }
 
   async function getVideos() {
-    if (!token.value) throw new Error('Not authenticated')
-    return getApi().admin.getVideos(token.value)
+    const token = await getAccessToken()
+    if (!token) throw new Error('Not authenticated')
+    return getApi().admin.getVideos(token)
+  }
+
+  async function getUsers(search?: string, page = 1) {
+    const token = await getAccessToken()
+    if (!token) throw new Error('Not authenticated')
+    return getApi().admin.getUsers(token, search, page)
+  }
+
+  async function getUserById(id: string) {
+    const token = await getAccessToken()
+    if (!token) throw new Error('Not authenticated')
+    return getApi().admin.getUserById(id, token)
+  }
+
+  async function updateUserRole(id: string, role: 'user' | 'admin') {
+    const token = await getAccessToken()
+    if (!token) throw new Error('Not authenticated')
+    return getApi().admin.updateUserRole(id, role, token)
+  }
+
+  async function deleteUser(id: string) {
+    const token = await getAccessToken()
+    if (!token) throw new Error('Not authenticated')
+    return getApi().admin.deleteUser(id, token)
+  }
+
+  async function inviteUser(email: string, name?: string, role?: 'user' | 'admin') {
+    const token = await getAccessToken()
+    if (!token) throw new Error('Not authenticated')
+    return getApi().admin.inviteUser({ email, name, role }, token)
   }
 
   return {
-    token: readonly(token),
     isAuthenticated,
-    login,
-    logout,
+    isAdmin,
     getConfig,
     updateTheme,
     getGames,
     createGame,
     getStats,
     getVideos,
+    getUsers,
+    getUserById,
+    updateUserRole,
+    deleteUser,
+    inviteUser,
   }
 }

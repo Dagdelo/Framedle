@@ -8,17 +8,44 @@ jobs:
   deploy:
     name: Trigger Coolify Deployment
     runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://framedle.wtf
     steps:
-      - name: Trigger Coolify webhook
+      - name: Create GitHub Deployment
+        id: deployment
+        uses: chrnorm/deployment-action@v2
+        with:
+          token: ${{ github.token }}
+          environment: production
+          ref: ${{ github.sha }}
+
+      - name: Trigger Coolify Deploy (API)
         run: |
-          curl -f -X POST "${{ secrets.COOLIFY_WEBHOOK_URL }}" \
-            -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" \
-            || echo "Coolify webhook not configured yet — deployment skipped"
-        # Alternative: SSH deploy
-        # - uses: appleboy/ssh-action@v1
-        #   with:
-        #     host: ${{ secrets.VPS_HOST }}
-        #     username: ${{ secrets.VPS_USER }}
-        #     key: ${{ secrets.VPS_SSH_KEY }}
-        #     script: |
-        #       cd /opt/framedle && git pull origin main
+          curl -sf -X GET \
+            "${{ secrets.COOLIFY_URL }}/api/v1/deploy?uuid=${{ secrets.COOLIFY_API_UUID }}&force=true" \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}"
+
+      - name: Wait for API Health
+        run: |
+          echo "Waiting for production API to be healthy..."
+          for i in $(seq 1 30); do
+            API=$(curl -sf https://api.framedle.wtf/health 2>/dev/null || echo "unhealthy")
+            if echo "$API" | grep -q "ok"; then
+              echo "Production API healthy!"
+              exit 0
+            fi
+            echo "Attempt $i/30 - API: $API"
+            sleep 10
+          done
+          echo "::error::Production health check timeout after 5 minutes"
+          exit 1
+
+      - name: Update Deployment Status
+        if: always()
+        uses: chrnorm/deployment-status@v2
+        with:
+          token: ${{ github.token }}
+          deployment-id: ${{ steps.deployment.outputs.deployment_id }}
+          state: ${{ job.status == 'success' && 'success' || 'failure' }}
+          environment-url: https://framedle.wtf

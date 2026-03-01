@@ -1,6 +1,6 @@
 <script setup lang="ts">
 const route = useRoute()
-const { logout } = useAdmin()
+const { signOut } = useAuth()
 
 const navItems = [
   { label: 'Dashboard', path: '/admin', icon: '◉' },
@@ -15,8 +15,7 @@ function isActive(path: string) {
 }
 
 function handleLogout() {
-  logout()
-  navigateTo('/admin/login')
+  signOut()
 }
 </script>
 

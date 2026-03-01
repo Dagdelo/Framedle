@@ -1,0 +1,62 @@
+name: Deploy Staging
+
+on:
+  push:
+    branches: [development]
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: true # safe for staging, unlike production
+
+jobs:
+  deploy:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: https://staging.framedle.wtf
+    steps:
+      - name: Create GitHub Deployment
+        id: deployment
+        uses: chrnorm/deployment-action@v2
+        with:
+          token: ${{ github.token }}
+          environment: staging
+          ref: ${{ github.sha }}
+
+      - name: Trigger Coolify Deploy (Web)
+        run: |
+          curl -sf -X GET \
+            "${{ secrets.COOLIFY_URL }}/api/v1/deploy?uuid=${{ secrets.COOLIFY_STAGING_WEB_UUID }}&force=true" \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}"
+
+      - name: Trigger Coolify Deploy (API)
+        run: |
+          curl -sf -X GET \
+            "${{ secrets.COOLIFY_URL }}/api/v1/deploy?uuid=${{ secrets.COOLIFY_STAGING_API_UUID }}&force=true" \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}"
+
+      - name: Wait for Staging Health
+        run: |
+          echo "Waiting for staging services to be healthy..."
+          for i in $(seq 1 30); do
+            WEB=$(curl -sf https://staging.framedle.wtf/api/health 2>/dev/null || echo "unhealthy")
+            API=$(curl -sf https://api-staging.framedle.wtf/health 2>/dev/null || echo "unhealthy")
+            if echo "$WEB" | grep -q "ok" && echo "$API" | grep -q "ok"; then
+              echo "Staging healthy!"
+              exit 0
+            fi
+            echo "Attempt $i/30 - Web: $WEB, API: $API"
+            sleep 10
+          done
+          echo "::error::Staging health check timeout after 5 minutes"
+          exit 1
+
+      - name: Update Deployment Status
+        if: always()
+        uses: chrnorm/deployment-status@v2
+        with:
+          token: ${{ github.token }}
+          deployment-id: ${{ steps.deployment.outputs.deployment_id }}
+          state: ${{ job.status == 'success' && 'success' || 'failure' }}
+          environment-url: https://staging.framedle.wtf

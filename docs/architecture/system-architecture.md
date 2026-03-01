@@ -170,6 +170,38 @@ WS    /api/duel/match/:matchId   → WebSocket via ws library + Valkey-backed st
 
 ---
 
+## OIDC Authentication Flow (Web — openid-client + H3 Sessions)
+
+```
+Browser                  Nuxt Server                  Logto
+   │                          │                          │
+   │── GET /api/auth/sign-in ─>│                          │
+   │                          │── discovery(logtoEndpoint)─>│
+   │                          │<─ OIDC config + JWKS ──────│
+   │                          │                          │
+   │                          │  generate PKCE + state   │
+   │                          │  store in cookie session  │
+   │<── 302 → Logto /auth ────│                          │
+   │                          │                          │
+   │──────────────── GET /auth?code_challenge=... ──────>│
+   │<─────────────── 302 → /api/auth/callback?code=... ──│
+   │                          │                          │
+   │── GET /api/auth/callback ─>│                          │
+   │                          │── token exchange (code) ─>│
+   │                          │<─ access_token + id_token─│
+   │                          │── verify PKCE state      │
+   │                          │  store tokens in session │
+   │<── 302 → / ─────────────│                          │
+   │                          │                          │
+   │── GET /api/auth/token ───>│                          │
+   │                          │  read session cookie     │
+   │<── { accessToken } ──────│  refresh if expired      │
+   │                          │                          │
+   │── API request + Bearer ──────────────────────────────────────>│ Hono API
+   │                          │                          │  jose.jwtVerify()
+   │<── API response ─────────────────────────────────────────────<│ via JWKS
+```
+
 ## Authentication Flow
 
 ```

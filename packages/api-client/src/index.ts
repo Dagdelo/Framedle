@@ -2,6 +2,8 @@ export { createFramedleClient } from './client'
 export type { FramedleClient } from './client'
 export type {
   AdminStats,
+  AdminUser,
+  AdminUserDetail,
   ApiResponse,
   CreateGameRequest,
   DailyGame,
@@ -13,9 +15,14 @@ export type {
   Guess,
   GuessRequest,
   GuessResult,
+  InviteUserRequest,
+  MergeResult,
   PaginatedGames,
+  PaginatedUsers,
   SiteConfig,
   ThemeConfig,
+  UserProfile,
+  UserStats,
   Video,
   VideoSearchResult,
 } from './types'
