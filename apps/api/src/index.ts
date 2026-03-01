@@ -1,10 +1,12 @@
 import 'dotenv/config'
+import './types/hono'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { serve } from '@hono/node-server'
 import { gameRoutes } from './routes/game'
 import { adminRoutes } from './routes/admin'
 import { videoRoutes } from './routes/videos'
+import { optionalAuth } from './middleware/auth'
 import { apiError } from './utils/response'
 
 const app = new Hono()
@@ -21,6 +23,9 @@ app.use(
     credentials: true,
   }),
 )
+
+// Auth — extract JWT if present, set user to null otherwise
+app.use('*', optionalAuth)
 
 // Health check
 app.get('/health', (c) => c.json({ status: 'ok' }))

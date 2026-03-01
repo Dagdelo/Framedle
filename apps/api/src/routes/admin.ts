@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { adminAuth } from '../middleware/admin-auth'
+import { requireAdmin } from '../middleware/auth'
 import { apiSuccess, apiError } from '../utils/response'
 import {
   getAllConfig,
@@ -14,7 +14,7 @@ import {
 export const adminRoutes = new Hono()
 
 // All admin routes require Bearer token auth
-adminRoutes.use('*', adminAuth)
+adminRoutes.use('*', requireAdmin)
 
 /**
  * GET /admin/config — All site config entries.
