@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# Multi-stage build for Next.js 15 standalone output
+# Multi-stage build for Nuxt 3 / Nitro standalone output
 
 # Stage 1: Install dependencies
 FROM node:22-alpine AS deps
@@ -31,23 +31,21 @@ RUN pnpm --filter @framedle/ui build
 RUN pnpm --filter @framedle/api-client build
 RUN pnpm --filter @framedle/web build
 
-# Stage 3: Production runner (standalone)
+# Stage 3: Production runner (Nitro standalone)
 FROM node:22-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
 
 RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nextjs
+    adduser --system --uid 1001 nuxtjs
 
-COPY --from=builder /repo/apps/web/public ./public
-COPY --from=builder --chown=nextjs:nodejs /repo/apps/web/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /repo/apps/web/.next/static ./.next/static
+COPY --from=builder --chown=nuxtjs:nodejs /repo/apps/web/.output ./
 
-USER nextjs
+USER nuxtjs
 
 EXPOSE 3000
 ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
+ENV HOST=0.0.0.0
 
-CMD ["node", "server.js"]
+CMD ["node", "server/index.mjs"]

@@ -4,7 +4,7 @@
 
 ## Purpose
 
-The `apps/web` package is the **Next.js 15 SSR web frontend** for Framedle. It handles:
+The `apps/web` package is the **Nuxt 3 SSR web frontend** for Framedle. It handles:
 
 - Server-side rendering for SEO (game hub, leaderboards, share pages)
 - Daily game UI for all 12 modes
@@ -18,24 +18,28 @@ Live at: `https://framedle.wtf`
 ## Key Routes / Pages
 
 ```
-app/
-├── page.tsx                        # Home / game hub — lists all modes + today's status
-├── layout.tsx                      # Root layout: fonts, Logto provider, analytics
-├── (game)/
-│   └── [mode]/
-│       ├── page.tsx                # Game page — renders correct game board for mode
-│       └── result/page.tsx         # Result screen (after completion)
+pages/
+├── index.vue                      # Home / game hub — lists all modes + today's status
+├── compare.vue                    # Design variant comparison page
+├── [mode]/
+│   ├── index.vue                  # Game page — renders correct game board for mode
+│   └── result.vue                 # Result screen (after completion)
 ├── leaderboard/
-│   └── [mode]/page.tsx             # Leaderboard — SSR top 100 + client rank highlight
+│   └── [mode].vue                 # Leaderboard — SSR top 100 + client rank highlight
 ├── share/
-│   └── [gameId]/page.tsx           # Share page — SSR for OG metadata, result display
-├── profile/
-│   └── page.tsx                    # User profile, stats, achievement grid
+│   └── [gameId].vue               # Share page — SSR for OG metadata, result display
+└── profile.vue                    # User profile, stats, achievement grid
+
+layouts/
+└── default.vue                    # Root layout: fonts, auth provider, analytics
+
+server/
 └── api/
-    └── og/route.ts                 # OG image generation (satori/resvg)
+    ├── health.get.ts              # Health check endpoint (GET /api/health)
+    └── og/[gameId].get.ts         # OG image generation (planned)
 ```
 
-Pages use **React Server Components** by default. Client components (`"use client"`) are used only for interactive game boards and real-time UI.
+Pages use **Vue 3 `<script setup>`** with Nuxt auto-imports. Server routes use **Nitro event handlers** (`defineEventHandler`).
 
 ---
 
@@ -43,7 +47,7 @@ Pages use **React Server Components** by default. Client components (`"use clien
 
 | Dependency | Purpose |
 |-----------|---------|
-| `packages/ui` | Shared design system — GameBoard, Button, Modal, etc. |
+| `packages/ui` | Shared Vue 3 design system — GameBoard, Button, Modal, etc. |
 | `packages/game-engine` | XState v5 state machines — game logic for all modes |
 | `packages/api-client` | Typed HTTP client — all requests to `api.framedle.wtf` |
 | `packages/shared` | Constants, validators, utility functions |
@@ -54,13 +58,14 @@ Pages use **React Server Components** by default. Client components (`"use clien
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `NEXT_PUBLIC_API_URL` | Yes | Hono API base URL (e.g. `https://api.framedle.wtf`) |
-| `NEXT_PUBLIC_LOGTO_ENDPOINT` | Yes | Logto auth server URL |
-| `NEXT_PUBLIC_LOGTO_APP_ID` | Yes | Logto application ID |
-| `NEXT_PUBLIC_SENTRY_DSN` | No | GlitchTip DSN for error tracking |
-| `NEXT_PUBLIC_UMAMI_SCRIPT_URL` | No | Umami analytics script URL |
-| `NEXT_PUBLIC_UMAMI_WEBSITE_ID` | No | Umami website ID |
-| `DATABASE_URL` | No | Direct DB access (only for server-side data fetching if bypassing API) |
+| `NUXT_PUBLIC_API_URL` | Yes | Hono API base URL (e.g. `https://api.framedle.wtf`) |
+| `NUXT_PUBLIC_LOGTO_ENDPOINT` | Yes | Logto auth server URL |
+| `NUXT_PUBLIC_LOGTO_APP_ID` | Yes | Logto application ID |
+| `NUXT_PUBLIC_SENTRY_DSN` | No | GlitchTip DSN for error tracking |
+| `NUXT_PUBLIC_UMAMI_URL` | No | Umami analytics script URL |
+| `NUXT_PUBLIC_UMAMI_WEBSITE_ID` | No | Umami website ID |
+
+Nuxt 3 exposes `NUXT_PUBLIC_*` variables to the client via `useRuntimeConfig().public`. Server-only variables use `NUXT_*` (without `PUBLIC`).
 
 Secrets are managed in Coolify's encrypted env var UI in production. Locally, copy `.env.template` to `.env`.
 
@@ -72,19 +77,19 @@ Secrets are managed in Coolify's encrypted env var UI in production. Locally, co
 # From repo root
 pnpm dev                          # Start all apps (Turborepo watches packages/)
 # Or, to run web only:
-cd apps/web && pnpm dev           # Start Next.js dev server on :3000
+pnpm --filter @framedle/web dev   # Start Nuxt dev server on :3000
 
-# Build (standalone output for Docker)
-pnpm build
+# Build (Nitro standalone output for Docker)
+pnpm --filter @framedle/web build
 
 # Type-check
-pnpm typecheck
+pnpm --filter @framedle/web typecheck
 
-# Lint
-pnpm lint
+# Preview production build locally
+pnpm --filter @framedle/web preview
 ```
 
-The dev server runs on `http://localhost:3000`. It expects the Hono API running on `:4000` (set `NEXT_PUBLIC_API_URL=http://localhost:4000`). Start local services with `docker compose up -d` from the repo root.
+The dev server runs on `http://localhost:3000`. It expects the Hono API running on `:4000` (set `NUXT_PUBLIC_API_URL=http://localhost:4000`). Start local services with `docker compose up -d` from the repo root.
 
 ---
 
@@ -93,9 +98,25 @@ The dev server runs on `http://localhost:3000`. It expects the Hono API running 
 `apps/web/Dockerfile` uses a **multi-stage build**:
 
 1. **deps** stage — installs `node_modules` with `pnpm install --frozen-lockfile`
-2. **builder** stage — runs `next build` with `output: "standalone"` (self-contained Node.js server, no node_modules needed at runtime)
-3. **runner** stage — minimal `node:22-alpine` image, copies `.next/standalone` and `.next/static`
+2. **builder** stage — runs `nuxt build` which produces a self-contained `.output/` directory via Nitro
+3. **runner** stage — minimal `node:22-alpine` image, copies `.output/` only (contains `server/index.mjs` — no `node_modules` needed at runtime)
 
-The standalone output keeps the runtime image small (~150–200 MB vs ~800 MB for a full install). Deployed via Coolify connected to the GitHub repo; every push to `main` triggers a rebuild.
+The Nitro standalone output keeps the runtime image small (~80–120 MB). Deployed via Coolify connected to the GitHub repo; every push to `main` triggers a rebuild.
 
 Coolify setting: **Dockerfile path** → `apps/web/Dockerfile`, **Domain** → `framedle.wtf`.
+
+---
+
+## Design Variants
+
+The app supports 5 visual design variants, switchable via `?variant=N` URL parameter:
+
+| Variant | Name | Visual Identity |
+|---------|------|----------------|
+| 1 | Neon Cinema | Dark, neon accents, arcade feel |
+| 2 | Paper Cut | Warm, handcrafted, analog nostalgia |
+| 3 | Vapor Grid | Retro-futurism, gradients, synthwave |
+| 4 | Brutal Mono | Brutalist, monospace, developer-chic |
+| 5 | Soft Focus | Premium, calm, streaming-app quality |
+
+Variant assets are stored in `apps/web/variants/v1/` through `apps/web/variants/v5/`. The `useDesignVariant()` composable manages variant selection.

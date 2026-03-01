@@ -16,9 +16,9 @@ services:
     environment:
       NODE_ENV: production
       PORT: "3000"
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
-      NEXT_PUBLIC_LOGTO_ENDPOINT: ${NEXT_PUBLIC_LOGTO_ENDPOINT}
-      NEXT_PUBLIC_LOGTO_APP_ID: ${NEXT_PUBLIC_LOGTO_APP_ID}
+      NUXT_PUBLIC_API_URL: ${NUXT_PUBLIC_API_URL}
+      NUXT_PUBLIC_LOGTO_ENDPOINT: ${NUXT_PUBLIC_LOGTO_ENDPOINT}
+      NUXT_PUBLIC_LOGTO_APP_ID: ${NUXT_PUBLIC_LOGTO_APP_ID}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.framedle-web.rule=Host(`${APP_DOMAIN}`)"

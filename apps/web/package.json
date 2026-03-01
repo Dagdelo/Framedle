@@ -4,24 +4,29 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "next build",
-    "dev": "next dev --turbopack",
-    "typecheck": "tsc --noEmit",
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "typecheck": "nuxt typecheck",
     "lint": "echo 'lint not configured yet'",
-    "test": "echo 'test not configured yet'",
-    "clean": "rm -rf dist .next"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "clean": "rm -rf dist .output .nuxt"
   },
   "dependencies": {
-    "@framedle/ui": "workspace:*",
     "@framedle/api-client": "workspace:*",
-    "next": "^15.1.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "@framedle/ui": "workspace:*",
+    "@nuxtjs/google-fonts": "^3.2.0",
+    "nuxt": "^3.15.0",
+    "vue": "^3.5.0",
+    "vue-router": "^4.5.0"
   },
   "devDependencies": {
+    "@nuxtjs/tailwindcss": "^6.12.0",
     "@types/node": "^22.0.0",
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^4.0.18"
   }
 }
