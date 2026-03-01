@@ -1,3 +1,5 @@
+// DEPRECATED: Use requireAdmin from ./auth.ts instead.
+// Kept for reference only. Will be removed in a future PR.
 import type { MiddlewareHandler } from 'hono'
 import { apiError } from '../utils/response'
 
