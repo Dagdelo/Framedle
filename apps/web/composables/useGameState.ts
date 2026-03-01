@@ -15,6 +15,7 @@ export function useGameState() {
   const answer = ref<string | null>(null)
 
   const { fingerprint } = useFingerprint()
+  const { isAuthenticated } = useAuth()
   const guessesRemaining = computed(() => MAX_GUESSES - guesses.value.length)
 
   async function loadGame() {
@@ -50,7 +51,7 @@ export function useGameState() {
       const res = await $api.game.submitGuess({
         dailyGameId: dailyGame.value.id,
         guess: text,
-        fingerprint: fingerprint.value,
+        ...(!isAuthenticated.value && { fingerprint: fingerprint.value }),
       })
 
       if (res.error) {
