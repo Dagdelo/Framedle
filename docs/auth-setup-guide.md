@@ -4,7 +4,7 @@ This guide covers configuring external OAuth providers in the self-hosted Logto 
 
 ## Prerequisites
 
-- Logto admin console accessible at `https://auth.framedle.wtf/console` (or via SSH tunnel locally)
+- Logto admin console accessible at `https://logto-admin.hd5.dev` (production) or `https://logto-admin-staging.hd5.dev` (staging)
 - Production domain: `framedle.wtf`
 - Staging domain: `api-staging.framedle.wtf` / `staging.framedle.wtf`
 
@@ -159,6 +159,8 @@ The M2M app is used by the Hono API to call Logto's Management API for user invi
    LOGTO_M2M_APP_SECRET=<App Secret>
    ```
 
+> **Important**: The Logto Management API resource identifier is always `https://default.logto.app/api` — not your instance domain. This is hardcoded in Logto OSS. Set `LOGTO_MANAGEMENT_API_RESOURCE=https://default.logto.app/api` in the API environment.
+
 ---
 
 ## API Resource
@@ -199,7 +201,7 @@ Configure Logto to fire lifecycle events to the Framedle API.
 3. Endpoint URL: `https://api.framedle.wtf/webhooks/logto`
 4. Events to subscribe:
    - `User.Created`
-   - `User.Updated`
+   - `User.Data.Updated`
    - `User.Deleted`
 5. Copy the **Signing key** and set:
    ```
