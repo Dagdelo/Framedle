@@ -42,6 +42,36 @@ export function useAdmin() {
     return getApi().admin.getVideos(token)
   }
 
+  async function getUsers(search?: string, page = 1) {
+    const token = await getAccessToken()
+    if (!token) throw new Error('Not authenticated')
+    return getApi().admin.getUsers(token, search, page)
+  }
+
+  async function getUserById(id: string) {
+    const token = await getAccessToken()
+    if (!token) throw new Error('Not authenticated')
+    return getApi().admin.getUserById(id, token)
+  }
+
+  async function updateUserRole(id: string, role: 'user' | 'admin') {
+    const token = await getAccessToken()
+    if (!token) throw new Error('Not authenticated')
+    return getApi().admin.updateUserRole(id, role, token)
+  }
+
+  async function deleteUser(id: string) {
+    const token = await getAccessToken()
+    if (!token) throw new Error('Not authenticated')
+    return getApi().admin.deleteUser(id, token)
+  }
+
+  async function inviteUser(email: string, name?: string, role?: 'user' | 'admin') {
+    const token = await getAccessToken()
+    if (!token) throw new Error('Not authenticated')
+    return getApi().admin.inviteUser({ email, name, role }, token)
+  }
+
   return {
     isAuthenticated,
     isAdmin,
@@ -51,5 +81,10 @@ export function useAdmin() {
     createGame,
     getStats,
     getVideos,
+    getUsers,
+    getUserById,
+    updateUserRole,
+    deleteUser,
+    inviteUser,
   }
 }

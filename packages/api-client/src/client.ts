@@ -2,10 +2,14 @@ import type { ApiResponse, DailyGame, GuessResult, GameResult, SiteConfig, Video
 import type { UserProfile, UserStats, MergeResult } from '@framedle/shared'
 import type {
   AdminStats,
+  AdminUser,
+  AdminUserDetail,
   CreateGameRequest,
   DailyGameResponse,
   GuessRequest,
+  InviteUserRequest,
   PaginatedGames,
+  PaginatedUsers,
   VideoSearchResult,
 } from './types'
 
@@ -108,6 +112,32 @@ export function createFramedleClient(
         }),
       getVideos: (token: string) =>
         request<Video[]>('/admin/videos', {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      getUsers: (token: string, search?: string, page = 1) =>
+        request<PaginatedUsers>(
+          `/admin/users?page=${page}${search ? `&search=${encodeURIComponent(search)}` : ''}`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        ),
+      getUserById: (id: string, token: string) =>
+        request<AdminUserDetail>(`/admin/users/${id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      updateUserRole: (id: string, role: 'user' | 'admin', token: string) =>
+        request<AdminUser>(`/admin/users/${id}/role`, {
+          method: 'PUT',
+          body: JSON.stringify({ role }),
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      deleteUser: (id: string, token: string) =>
+        request<void>(`/admin/users/${id}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      inviteUser: (body: InviteUserRequest, token: string) =>
+        request<void>('/admin/invite', {
+          method: 'POST',
+          body: JSON.stringify(body),
           headers: { Authorization: `Bearer ${token}` },
         }),
     },

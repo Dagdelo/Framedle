@@ -99,6 +99,20 @@ onMounted(async () => {
           <h3 class="font-medium text-white">Theme Settings</h3>
           <p class="text-sm text-zinc-400 mt-1">Switch the active design variant</p>
         </NuxtLink>
+        <NuxtLink
+          to="/admin/users"
+          class="bg-zinc-900 border border-zinc-800 rounded-lg p-5 hover:border-zinc-700 transition-colors block"
+        >
+          <h3 class="font-medium text-white">User Management</h3>
+          <p class="text-sm text-zinc-400 mt-1">Search, manage roles, and remove users</p>
+        </NuxtLink>
+        <NuxtLink
+          to="/admin/invite"
+          class="bg-zinc-900 border border-zinc-800 rounded-lg p-5 hover:border-zinc-700 transition-colors block"
+        >
+          <h3 class="font-medium text-white">Invite User</h3>
+          <p class="text-sm text-zinc-400 mt-1">Send email invitations via Logto</p>
+        </NuxtLink>
       </div>
     </div>
   </div>
