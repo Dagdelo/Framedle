@@ -6,6 +6,8 @@ import { serve } from '@hono/node-server'
 import { gameRoutes } from './routes/game'
 import { adminRoutes } from './routes/admin'
 import { videoRoutes } from './routes/videos'
+import { userRoutes } from './routes/user'
+import { webhookRoutes } from './routes/webhooks'
 import { optionalAuth } from './middleware/auth'
 import { apiError } from './utils/response'
 
@@ -34,6 +36,8 @@ app.get('/health', (c) => c.json({ status: 'ok' }))
 app.route('/game', gameRoutes)
 app.route('/admin', adminRoutes)
 app.route('/videos', videoRoutes)
+app.route('/user', userRoutes)
+app.route('/webhooks', webhookRoutes)
 
 // Global error handler
 app.onError((err, c) => {
