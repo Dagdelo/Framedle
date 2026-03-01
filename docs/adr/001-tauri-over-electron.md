@@ -99,3 +99,21 @@ The web app uses Next.js for SSR/SEO (share pages, landing page). Desktop and mo
 - [Tauri v2 Documentation](https://v2.tauri.app)
 - [Tauri v2 Mobile Support](https://v2.tauri.app/blog/tauri-2-0-0-stable-release/)
 - [Tauri vs Electron Benchmarks](https://github.com/nicehash/nicehash-lp/blob/main/tauri-vs-electron.md)
+
+---
+
+## Status Update — 2026-03-01: Vue 3 / Nuxt 3 Framework Swap
+
+**Context**: The original ADR premises a "single React codebase" shared across web, desktop, and mobile via Tauri v2. A design sprint decision (see ADR-010) swapped the empty Next.js 15 scaffold for Nuxt 3 + Vue 3 before any application code was written. Zero migration cost — only scaffold files were replaced.
+
+**Impact on this ADR**: The "single codebase" benefit described in the Architecture Impact and Consequences sections now refers to a **single Vue 3 codebase**, not React. Specifically:
+
+- `packages/ui/` exports Vue 3 SFCs (Single File Components), not React components
+- `apps/web/` runs Nuxt 3 with SSR, not Next.js 15
+- `apps/desktop/` and `apps/mobile/` will use Tauri v2 wrapping Vue 3 components from `packages/ui/`
+- Tauri v2 supports Nuxt as a frontend framework via standard configuration (SSR disabled for Tauri builds)
+- The cross-platform codebase benefit remains fully valid — only the framework has changed
+
+**What remains unchanged**: All other aspects of this ADR — the choice of Tauri v2 over Electron, the binary size and memory advantages, the mobile support, the Rust backend, and the mitigation strategies — are unaffected by this framework swap.
+
+**See also**: ADR-010 (Nuxt 3 Framework Swap) for the full decision record.
