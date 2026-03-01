@@ -109,6 +109,7 @@ caddy_data/
 # Agent / AI tooling (session-specific, not shared)
 # ============================================================
 .claude/
+!.claude/skills/
 .omc/
 .opencode/plugins/node_modules/
 
