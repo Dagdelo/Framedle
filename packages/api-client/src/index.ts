@@ -13,9 +13,12 @@ export type {
   Guess,
   GuessRequest,
   GuessResult,
+  MergeResult,
   PaginatedGames,
   SiteConfig,
   ThemeConfig,
+  UserProfile,
+  UserStats,
   Video,
   VideoSearchResult,
 } from './types'

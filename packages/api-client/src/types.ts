@@ -7,8 +7,11 @@ export type {
   GameState,
   Guess,
   GuessResult,
+  MergeResult,
   SiteConfig,
   ThemeConfig,
+  UserProfile,
+  UserStats,
   Video,
 } from '@framedle/shared'
 
@@ -26,7 +29,7 @@ export interface DailyGameResponse {
 export interface GuessRequest {
   dailyGameId: string
   guess: string
-  fingerprint: string
+  fingerprint?: string
 }
 
 /** Video search result from GET /videos/search */

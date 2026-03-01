@@ -2,7 +2,11 @@ import { createFramedleClient, type FramedleClient } from '@framedle/api-client'
 
 export default defineNuxtPlugin(() => {
   const config = useRuntimeConfig()
-  const client = createFramedleClient(config.public.apiUrl as string)
+  const auth = useAuth()
+
+  const client = createFramedleClient(config.public.apiUrl as string, {
+    getAccessToken: () => auth.getAccessToken(),
+  })
 
   return {
     provide: {
