@@ -1,0 +1,22 @@
+# Framedle Seed Videos — iconic YouTube videos across categories
+# Format: VIDEO_ID # Description
+# Already processed: dQw4w9WgXcQ, 9bZkp7q19f0, RgKAFK5djSk, fJ9rUzIMcZQ, DLzxrzFCyOs, OQSNhk5ICTI, e-ORhEE9VVg, YQHsXMglC9A
+kJQP7kiw5Fk # Luis Fonsi - Despacito
+hT_nvWreIhg # OneRepublic - Counting Stars
+dT3K2_dSdLo # a-ha - Take On Me
+ZmDhRvvs5Gw # PewDiePie - Minecraft Part 1
+TL470fJMi7w # Markiplier - Five Nights at Freddy's
+YbJOTdZBX1g # Keyboard Cat
+tgbNymZ7vqY # David After Dentist
+rHLhnaGbgHs # Vsauce - What If Everyone Jumped at Once
+ICjFAa2ZbIY # Veritasium - Synchronization
+GD6qtc2_AQA # Kurzgesagt - The Egg
+nrOLGifnMJk # Vaudeville Smash - Zinedine Zidane
+jNQXAC9IVRw # Me at the zoo (first YouTube video)
+pRpeEdMmmQ0 # Shakira - Waka Waka
+ktvTqknDobU # Imagine Dragons - Radioactive
+JGwWNGJdvx8 # Ed Sheeran - Shape of You
+60ItHLz5WEA # Alan Walker - Faded
+lp-EO5I60KA # Eminem - Lose Yourself
+bo_efYhYU2A # The Weeknd - Blinding Lights
+uelHwf8o7_U # Coldplay - Fix You

@@ -9,17 +9,171 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  ci:
-    name: Lint, Type Check, Test, Build
+  # ─────────────────────────────────────────────────────────────
+  # Job 1: Unit tests (packages/*, apps/web composables)
+  # No external services required.
+  # ─────────────────────────────────────────────────────────────
+  unit:
+    name: Unit Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: pnpm/action-setup@v4
         with:
           version: 9
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
+
       - run: pnpm install --frozen-lockfile
-      - run: pnpm turbo run lint typecheck test build
+
+      - name: Lint + Typecheck
+        run: pnpm turbo run lint typecheck
+
+      - name: Unit tests with coverage
+        run: pnpm turbo run test:coverage --filter='./packages/*' --filter='@framedle/web'
+
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-unit
+          path: |
+            packages/*/coverage/
+          retention-days: 7
+
+  # ─────────────────────────────────────────────────────────────
+  # Job 2: Integration tests (apps/api against real Postgres + Valkey)
+  # ─────────────────────────────────────────────────────────────
+  integration:
+    name: Integration Tests (API)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: framedle_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      valkey:
+        image: valkey/valkey:8
+        options: >-
+          --health-cmd "valkey-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    env:
+      TEST_DATABASE_URL: postgres://postgres:test@localhost:5432/framedle_test
+      TEST_VALKEY_URL: redis://localhost:6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Integration tests
+        run: pnpm --filter @framedle/api test:integration
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-integration
+          path: apps/api/coverage/
+          retention-days: 7
+
+  # ─────────────────────────────────────────────────────────────
+  # Job 3: Pipeline tests (pytest, no external services)
+  # ─────────────────────────────────────────────────────────────
+  pipeline:
+    name: Pipeline Tests (pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install pipeline dependencies
+        run: pip install -r pipeline/requirements.txt pytest pytest-mock
+
+      - name: Install ffmpeg (for variant generation tests)
+        run: sudo apt-get install -y ffmpeg
+
+      - name: Run pytest
+        run: python -m pytest pipeline/tests/ -v --tb=short
+
+  # ─────────────────────────────────────────────────────────────
+  # Job 4: E2E tests (Playwright, Chromium only)
+  # Depends on unit passing so we don't waste time if types/lint fail.
+  # ─────────────────────────────────────────────────────────────
+  e2e:
+    name: E2E Tests (Playwright)
+    runs-on: ubuntu-latest
+    needs: [unit]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        run: pnpm playwright install --with-deps chromium
+
+      - name: Build Nuxt app
+        run: pnpm --filter @framedle/web build
+        env:
+          NUXT_PUBLIC_API_URL: http://localhost:4000
+
+      - name: Start Nuxt preview server
+        run: pnpm --filter @framedle/web preview &
+        env:
+          PORT: 3000
+
+      - name: Wait for preview server
+        run: npx wait-on http://localhost:3000 --timeout 30000
+
+      - name: Run Playwright smoke tests
+        run: pnpm playwright test e2e/smoke/
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3000
+          CI: true
+
+      - name: Upload Playwright report on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

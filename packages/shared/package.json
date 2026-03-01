@@ -9,10 +9,14 @@
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "lint": "echo 'lint not configured yet'",
-    "test": "echo 'test not configured yet'",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "clean": "rm -rf dist"
   },
   "devDependencies": {
-    "typescript": "^5.7.0"
+    "@vitest/coverage-v8": "^4.0.18",
+    "typescript": "^5.7.0",
+    "vitest": "^4.0.18"
   }
 }
