@@ -1,0 +1,6 @@
+export { default as FrameViewer } from './FrameViewer.vue'
+export { default as GuessInput } from './GuessInput.vue'
+export { default as GuessHistory } from './GuessHistory.vue'
+export type { Guess } from './types'
+export { default as ScoreDisplay } from './ScoreDisplay.vue'
+export { default as ShareButton } from './ShareButton.vue'
